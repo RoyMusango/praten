@@ -55,6 +55,13 @@
     shared[k] = v; localStorage.setItem(SHARED_KEYS, JSON.stringify(shared));
     state.settings[k] = v; save();
   }
+  // Une clé saisie dans une autre app (autre onglet) s'applique tout de suite ici
+  window.addEventListener('storage', e => {
+    if (e.key !== SHARED_KEYS || !state) return;
+    let shared = {};
+    try { shared = JSON.parse(e.newValue) || {}; } catch (err) { }
+    for (const k of KEY_FIELDS) if (shared[k]) state.settings[k] = shared[k];
+  });
   let saveTimer = null;
   function save() {
     clearTimeout(saveTimer);

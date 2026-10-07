@@ -21,13 +21,20 @@
   class AIError extends Error { constructor(msg, status) { super(msg); this.status = status; } }
 
   async function gemini(model, body) {
-    const res = await fetch(`${GEMINI_URL}/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Store.settings.geminiKey },
-      body: JSON.stringify(body),
-    });
+    let res;
+    try {
+      res = await fetch(`${GEMINI_URL}/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': Store.settings.geminiKey },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(40000),
+      });
+    } catch (e) {
+      // Pas de réponse (serveur surchargé, réseau) : on passe au modèle suivant au lieu d'attendre sans fin
+      throw new AIError(e.name === 'TimeoutError' ? `${model} ne répond pas (délai dépassé)` : `Réseau : ${e.message}`, 503);
+    }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new AIError((data.error && data.error.message) || res.statusText, res.status);
+    if (!res.ok) throw new AIError(`${(data.error && data.error.message) || res.statusText} (${model}, ${res.status})`, res.status);
     const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
     if (!parts) throw new AIError('Réponse vide (contenu bloqué ?)', 500);
     return parts.filter(p => !p.thought).map(p => p.text || '').join('');
