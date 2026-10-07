@@ -47,8 +47,8 @@
         countRequest();
         try { return await gemini(model, body); }
         catch (e) {
-          // Certains modèles refusent de désactiver la réflexion : on réessaie sans.
-          if (e.status === 400 && /think/i.test(e.message)) {
+          // Certains modèles refusent de désactiver la réflexion (parfois avec un simple « invalid argument ») : on réessaie sans.
+          if (e.status === 400 && !/API key/i.test(e.message)) {
             const b2 = structuredClone(body); delete b2.generationConfig.thinkingConfig;
             countRequest();
             return await gemini(model, b2);

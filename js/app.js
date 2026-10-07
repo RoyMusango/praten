@@ -1091,7 +1091,7 @@
         <label class="field"><span>Fournisseur</span><select id="provider"><option value="gemini">Google Gemini, gratuit (recommandé)</option><option value="openai">Compatible OpenAI : Groq, OpenRouter…</option></select></label>
         <div id="pGemini">
           <ol class="small" style="padding-left:18px;color:var(--ink-2)"><li>Ouvre <a class="link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> avec ton compte Google.</li><li>Clique sur « Create API key » et copie la clé.</li><li>Colle-la ci-dessous. Elle reste dans ce navigateur, est partagée avec tes autres apps de langues et n’est jamais écrite dans les sauvegardes.</li></ol>
-          <label class="field"><span>Clé API Gemini</span><input id="gKey" type="password" value="${esc(s.geminiKey)}" placeholder="AIza…"></label>
+          <label class="field"><span>Clé API Gemini</span><input id="gKey" type="password" value="${esc(s.geminiKey)}" placeholder="AIza… ou AQ.…"></label>
           <label class="field"><span>Modèle</span><div style="display:flex;gap:10px"><select id="gModel"><option value="${esc(s.geminiModel)}">${esc(s.geminiModel)}</option></select><button class="btn quiet small" id="gList">Charger la liste</button></div></label>
           <p class="muted small">« gemini-flash-latest » suit le dernier modèle Flash gratuit. Si le quota est atteint, l’app passe automatiquement sur un modèle plus léger. Le quota est commun à tes trois apps.</p>
         </div>
