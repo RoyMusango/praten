@@ -45,10 +45,16 @@
     return { ok: true, msg: best.name };
   }
 
-  let warned = false;
+  let warned = false, last = null, speakId = 0, watchdog = null;
   function speak(text, { rate, onend, gender } = {}) {
-    const done = () => onend && onend();
+    // onend n'est appelé qu'une fois, et pas si une autre lecture a pris la place (sinon le micro s'ouvrirait pendant qu'on parle)
+    const id = ++speakId; let fired = false;
+    clearInterval(watchdog);
+    const done = () => { if (fired || id !== speakId) return; fired = true; clearInterval(watchdog); onend && onend(); };
+    // Les indications entre parenthèses (verbe à conjuguer, « zij (elle) »…) ne font pas partie de la phrase
+    text = String(text || '').replace(/\s*\([^)]*\)/g, '').replace(/\s+([.,!?;:])/g, '$1').trim();
     if (!synth || !text) return done();
+    last = { text, gender };
     const voice = pickVoice(gender);
     if (!voice) {
       if (!warned) { warned = true; global.dispatchEvent(new CustomEvent('tts-missing', { detail: status().msg })); }
@@ -64,11 +70,21 @@
       if (i === parts.length - 1) { u.onend = done; u.onerror = done; }
       synth.speak(u);
     });
+    // Chrome (surtout Android) oublie parfois l'événement de fin : on vérifie nous-mêmes que la voix s'est tue
+    if (onend) {
+      const t0 = Date.now();
+      watchdog = setInterval(() => { if (Date.now() - t0 > 800 && !synth.speaking && !synth.pending) done(); }, 400);
+    }
   }
-  function stopSpeaking() { synth && synth.cancel(); }
+  function stopSpeaking() { speakId++; clearInterval(watchdog); synth && synth.cancel(); }
+  // Relit la dernière phrase (après un changement de vitesse)
+  function repeat() { if (last) speak(last.text, { gender: last.gender }); }
 
   // --- Reconnaissance vocale ---
   const SR = global.SpeechRecognition || global.webkitSpeechRecognition;
+  const ANDROID = /Android/i.test(navigator.userAgent);
+  // Filet de sécurité : un même mot répété 3 fois ou plus d'affilée (« no no no no ») est un bégaiement du moteur
+  const cleanRepeats = s => s.replace(/(^|\s)(\S+)(?:\s+\2){2,}(?=\s|$)/gi, '$1$2');
 
   class Listener {
     constructor({ onText, onState, onAutoStop }) {
@@ -78,22 +94,35 @@
     start({ autoStopAfterSilence = 0 } = {}) {
       if (!SR) { alert('La reconnaissance vocale n’est pas disponible dans ce navigateur. Utilise Chrome ou Edge.'); return; }
       stopSpeaking();
-      this.finalText = ''; this.active = true; this.autoStop = autoStopAfterSilence;
+      this.finalText = ''; this.baseText = ''; this.active = true; this.autoStop = autoStopAfterSilence;
       this.startedAt = Date.now();
       this._open();
       this.onState && this.onState(true);
     }
     _open() {
       const r = new SR();
-      r.lang = Store.settings.voiceVariant || V.defaultVariant; r.continuous = true; r.interimResults = true;
+      // Chrome Android gère mal le mode continu (résultats répétés) : on écoute phrase par phrase et on relance
+      r.lang = Store.settings.voiceVariant || V.defaultVariant; r.continuous = !ANDROID; r.interimResults = true;
+      this.baseText = this.finalText; // texte des écoutes précédentes (avant relance)
       r.onresult = (e) => {
-        let interim = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const res = e.results[i];
-          if (res.isFinal) this.finalText += (this.finalText ? ' ' : '') + res[0].transcript.trim();
-          else interim += res[0].transcript;
+        // On reconstruit tout le texte à chaque fois au lieu d'ajouter des morceaux :
+        // Android renvoie des résultats « finaux » cumulés (« No », « No pienso », « No pienso que »…)
+        const finals = []; let interim = '';
+        for (let i = 0; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript.trim();
+          if (!t) continue;
+          if (e.results[i].isFinal) finals.push(t); else interim += (interim ? ' ' : '') + t;
         }
-        this.onText && this.onText(this.finalText, interim);
+        const merged = [];
+        for (const t of finals) {
+          const last = merged[merged.length - 1], lt = last && last.toLowerCase(), tt = t.toLowerCase();
+          if (last && tt.startsWith(lt)) merged[merged.length - 1] = t;
+          else if (!(last && lt.startsWith(tt))) merged.push(t);
+        }
+        const session = merged.join(' ');
+        if (interim && session && interim.toLowerCase().startsWith(session.toLowerCase())) interim = interim.slice(session.length).trim();
+        this.finalText = cleanRepeats([this.baseText, session].filter(Boolean).join(' '));
+        this.onText && this.onText(this.finalText, cleanRepeats(interim));
         if (this.autoStop) {
           clearTimeout(this.silenceTimer);
           this.silenceTimer = setTimeout(() => { if (this.active && this.finalText) this.stop(true); }, this.autoStop);
@@ -124,5 +153,5 @@
     }
   }
 
-  global.Speech = { speak, stopSpeaking, Listener, status, genderOf, isPreferred, get voices() { return voices; }, supported: !!SR, loadVoices };
+  global.Speech = { speak, stopSpeaking, repeat, Listener, status, genderOf, isPreferred, get voices() { return voices; }, supported: !!SR, loadVoices };
 })(window);

@@ -279,9 +279,10 @@ tr.hl td { background: var(--gold); color: #111; font-weight: 500; }
 .tip { margin-top: 24px; padding: 16px 18px; background: var(--surface); font-size: .92rem; }
 
 /* Navigation longue (néerlandais) : on resserre avant de passer en mode mobile */
-@media (max-width: 1240px) and (min-width: 861px) {
+@media (max-width: 1480px) and (min-width: 861px) {
   .topbar-in { gap: 20px; }
-  #nav { gap: 16px; }
+  #nav { gap: 16px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  #nav a { white-space: nowrap; }
   #nav a { letter-spacing: .08em; }
   .today-chip .mini { display: none; }
 }
@@ -304,3 +305,12 @@ tr.hl td { background: var(--gold); color: #111; font-weight: 500; }
   .fab { padding: 0; width: 52px; justify-content: center; }
   .panel, .modal-box { padding: 22px; }
 }
+
+/* Vitesse de lecture */
+.speed-sel { flex: none; width: auto; min-width: 0; height: 30px; border: 1px solid var(--line); background: none; color: var(--ink-2); font: 500 .8rem var(--font); padding: 4px 6px; cursor: pointer; }
+.speed { display: inline-flex; border: 1px solid var(--line); }
+.speed button { border: 0; background: none; color: var(--ink-2); font: 500 .75rem var(--font); padding: 6px 8px; cursor: pointer; }
+.speed button + button { border-left: 1px solid var(--line); }
+.speed button.on { background: var(--ink); color: var(--bg); }
+.trainer details.help { text-align: left; margin: 4px 0 16px; padding: 10px 14px; border: 1px dashed var(--line); }
+.trainer details.help p { margin: 8px 0; }

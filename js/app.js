@@ -31,6 +31,17 @@
   };
   const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>`;
   const sayBtn = (text, title = 'Écouter') => `<button class="say" data-say="${esc(text)}" title="${title}">${icon('sound')}</button>`;
+  // Vitesse de lecture : réglable partout (menu de l'en-tête) et en boutons dans la conversation et la lecture
+  const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+  const isRate = r => Math.abs(S().ttsRate - r) < 0.01;
+  const speedChips = () => `<div class="speed" role="group" aria-label="Vitesse de lecture">${SPEEDS.map(r => `<button class="${isRate(r) ? 'on' : ''}" data-rate="${r}" title="Vitesse ${r}×">${r}×</button>`).join('')}</div>`;
+  function syncSpeed() {
+    const sel = $('#speedSel'), r = S().ttsRate;
+    if (sel) sel.innerHTML = [...new Set([...SPEEDS, r])].sort((a, b) => a - b).map(x => `<option value="${x}" ${Math.abs(r - x) < 0.01 ? 'selected' : ''}>${x}×</option>`).join('');
+    $$('[data-rate]').forEach(b => b.classList.toggle('on', isRate(+b.dataset.rate)));
+    const rv = $('#rateV'), ri = $('#rate'); if (rv) rv.textContent = r; if (ri) ri.value = r;
+  }
+  function setSpeed(r) { S().ttsRate = r; Store.save(); syncSpeed(); Speech.repeat(); }
 
   // ---------- En-tête : marque et navigation ----------
   document.title = L.title;
@@ -155,6 +166,9 @@
   window.addEventListener('hashchange', go);
 
   document.addEventListener('click', e => { const b = e.target.closest('[data-say]'); if (b) Speech.speak(b.dataset.say); });
+  document.addEventListener('click', e => { const b = e.target.closest('[data-rate]'); if (b) setSpeed(+b.dataset.rate); });
+  $('#speedSel').onchange = e => setSpeed(+e.target.value);
+  syncSpeed();
 
   function modal(html) {
     $('#modalBox').innerHTML = `<button class="icon-btn close" data-close title="Fermer">${icon('x')}</button>` + html;
@@ -178,7 +192,8 @@
     });
     btn.addEventListener('click', () => {
       if (l.active) { const txt = l.stop(); if (autoSend && txt && onDone) onDone(txt); }
-      else { currentListener = l; input.value = ''; l.start(); }
+      // Mains libres : envoi automatique après un silence, sans avoir à recliquer
+      else { currentListener = l; input.value = ''; l.start({ autoStopAfterSilence: autoSend && S().handsFree ? 2500 : 0 }); }
     });
     return l;
   }
@@ -354,6 +369,7 @@
         <div class="chat-tools">
           <label class="check"><input type="checkbox" id="handsFree" ${S().handsFree ? 'checked' : ''}> Mains libres</label>
           <label class="check"><input type="checkbox" id="showTr" ${S().showTranslation ? 'checked' : ''}> Traductions</label>
+          ${speedChips()}
           <span class="spacer"></span>
           <button class="btn small ghost" id="endBtn">Terminer et voir le bilan</button>
         </div>
@@ -380,12 +396,12 @@
       const el = document.createElement('div');
       el.className = 'msg ai';
       el.innerHTML = `<span class="name">${esc(scn.who)}</span><div class="bubble">${esc(m.text)}<div class="tr">${esc(m.tr || '')}</div></div>
-        <div class="msg-tools"><button data-a="say" title="Réécouter">${icon('sound')}</button><button data-a="slow" title="Plus lentement">0.7×</button>${m.tr ? '<button data-a="tr" title="Traduction">FR</button>' : ''}</div>
+        <div class="msg-tools"><button data-a="say" title="Réécouter">${icon('sound')}</button><button data-a="slow" title="Plus lentement">0.75×</button>${m.tr ? '<button data-a="tr" title="Traduction">FR</button>' : ''}</div>
         ${m.vocab && m.vocab.length ? `<div class="words-pop">${m.vocab.map(v => `<span><b>${esc(v.word)}</b> ${esc(v.fr)}${v.syn && v.syn.length ? ` <span class="muted">· ${esc(v.syn.join(', '))}</span>` : ''}</span>`).join('')}</div>` : ''}`;
       el.querySelector('.msg-tools').onclick = e => {
         const a = e.target.closest('[data-a]'); if (!a) return;
         if (a.dataset.a === 'say') Speech.speak(m.text, { gender: g() });
-        if (a.dataset.a === 'slow') Speech.speak(m.text, { rate: 0.7, gender: g() });
+        if (a.dataset.a === 'slow') Speech.speak(m.text, { rate: 0.75, gender: g() });
         if (a.dataset.a === 'tr') el.classList.toggle('show-tr');
       };
       chat.appendChild(el); el.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -716,12 +732,22 @@
       const it = items[i];
       box.innerHTML = `<div class="trainer"><div class="meta"><span>${it.kind === 'context' ? 'Choisis le temps' : 'Conjugue'}</span><div class="meter"><i style="width:${i / items.length * 100}%"></i></div><span>${i + 1} / ${items.length}${run >= 3 ? ` · ${icon('flame')} ${run}` : ''}</span></div>
         <div class="prompt">${esc(it.prompt).replace('___', '<span class="blank">___</span>')}</div><div class="prompt-sub">${esc(it.sub)}</div>
+        ${helpBox(it)}
         <div class="answer-row"><button class="mic" id="cMic"></button><input id="cIn" autocomplete="off" placeholder="${esc(it.placeholder || 'Forme conjuguée')}"><button class="btn" id="cCheck">Vérifier</button></div>
         <div id="cRes"></div></div>`;
       const inp = $('#cIn'); inp.focus();
       micFor($('#cMic'), inp, { onDone: () => check(), autoSend: true });
       $('#cCheck').onclick = () => check();
       inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); answered ? (i++, show()) : check(); } };
+    }
+    // Aide avant de répondre (langues débutantes) : ouverte tant que le temps est encore nouveau
+    function helpBox(it) {
+      const rule = Conj.RULES && Conj.RULES[it.tense];
+      if (!rule) return '';
+      const table = Conj.itemTable ? Conj.itemTable(it) : null;
+      const open = Store.conjTense(it.tense).n < 8 ? 'open' : '';
+      return `<details class="help" ${open}><summary class="small">Aide : la règle${table ? ' et le modèle' : ''}</summary><p class="small">${esc(rule)}</p>
+        ${table && it.tense !== 'vraag' ? `<table class="small">${table.rows.filter(r => !r[2]).map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table>` : ''}</details>`;
     }
     function check() {
       if (answered) return;
@@ -943,7 +969,7 @@
     html = html.replace(/\u0001(\d+)\u0002/g, (m, k) => marks[k]);
     const paras = html.split(/\n\s*\n|\n/).filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
     $('#rOut').innerHTML = `<section class="section"><div class="section-head"><h2>${esc(r.title)}</h2><span class="muted small">${esc(r.topic || '')}</span></div>
-      <div class="row" style="margin:0 0 20px"><button class="btn ghost small" id="rListen">${icon('sound')} Écouter</button><button class="btn quiet small" id="rSlow">0.8×</button><button class="btn quiet small" id="rStop">Stop</button></div>
+      <div class="row" style="margin:0 0 20px"><button class="btn ghost small" id="rListen">${icon('sound')} Écouter</button><button class="btn quiet small" id="rSlow">0.8×</button><button class="btn quiet small" id="rStop">Stop</button>${speedChips()}</div>
       <div class="reading">${paras}</div>
       ${r.translation_fr ? `<details style="margin-top:12px"><summary class="small">Traduction</summary><div class="review">${esc(r.translation_fr)}</div></details>` : ''}
       <details style="margin-top:12px"><summary class="small">Glossaire (${(r.glossary || []).length})</summary><table>${(r.glossary || []).map(g => `<tr><td>${sayBtn(g.word)} <b>${esc(g.word)}</b></td><td>${esc(g.fr)}</td></tr>`).join('')}</table>
@@ -1109,7 +1135,7 @@
         ${V.variants ? `<label class="field"><span>Accent</span><select id="variant">${V.variants.map(([k, l]) => `<option value="${k}" ${s.voiceVariant === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>` : ''}
         <label class="field"><span>Voix par défaut</span><select id="voice">${voiceOpts()}</select></label>
         <label class="check"><input type="checkbox" id="byRole" ${s.voiceByRole ? 'checked' : ''}> Une voix d’homme ou de femme selon le personnage</label>
-        <label class="field" style="margin-top:14px"><span>Vitesse : <b id="rateV">${s.ttsRate}</b></span><input id="rate" type="range" min="0.6" max="1.2" step="0.05" value="${s.ttsRate}"></label>
+        <label class="field" style="margin-top:14px"><span>Vitesse : <b id="rateV">${s.ttsRate}</b></span><input id="rate" type="range" min="0.5" max="2" step="0.05" value="${s.ttsRate}"></label>
         <label class="check"><input type="checkbox" id="autoSpeak" ${s.autoSpeak ? 'checked' : ''}> Lire automatiquement les réponses en conversation</label>
         <label class="check"><input type="checkbox" id="hands" ${s.handsFree ? 'checked' : ''}> Mode mains libres : le micro se rouvre après chaque réponse</label>
         <div class="row"><button class="btn ghost small" id="tF">Tester une voix féminine</button><button class="btn ghost small" id="tM">Tester une voix masculine</button></div>
@@ -1153,7 +1179,7 @@
     $('#voice').onchange = e => set('ttsVoice', e.target.value);
     if ($('#variant')) $('#variant').onchange = e => { set('voiceVariant', e.target.value); set('ttsVoice', ''); Speech.loadVoices(); $('#voice').innerHTML = voiceOpts(); };
     $('#byRole').onchange = e => set('voiceByRole', e.target.checked);
-    $('#rate').oninput = e => { set('ttsRate', +e.target.value); $('#rateV').textContent = e.target.value; };
+    $('#rate').oninput = e => { set('ttsRate', +e.target.value); syncSpeed(); };
     $('#autoSpeak').onchange = e => set('autoSpeak', e.target.checked);
     $('#hands').onchange = e => set('handsFree', e.target.checked);
     $('#tF').onclick = () => Speech.speak(V.testF, { gender: 'f' });

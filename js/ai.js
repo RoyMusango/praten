@@ -3,7 +3,7 @@
 (function (global) {
   const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta';
   // Modèles essayés si le modèle choisi est épuisé (429) ou introuvable (404)
-  const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+  const GEMINI_FALLBACKS = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.5-flash-lite'];
   const A = LANG.ai;
 
   // Profil de l'apprenant, partagé par toutes les apps
@@ -40,35 +40,54 @@
     return parts.filter(p => !p.thought).map(p => p.text || '').join('');
   }
 
+  // Réglages de réflexion essayés dans l'ordre : Gemini 3 veut « thinkingLevel », Gemini 2.5 « thinkingBudget ».
+  // Sans réflexion minimale, le modèle réfléchit longuement et répond en 10 à 30 s.
+  const THINK = [{ thinkingLevel: 'minimal' }, { thinkingLevel: 'low' }, { thinkingBudget: 0 }, null];
+  const THINK_KEY = 'applangues-think';
+  let thinkMemo = {};
+  try { thinkMemo = JSON.parse(localStorage.getItem(THINK_KEY)) || {}; } catch (e) { }
+  const deadModels = new Set(); // modèles retirés par Google (404) : on ne les réessaie plus dans la session
+
+  async function geminiModel(model, base) {
+    let start = Math.max(0, THINK.findIndex(t => JSON.stringify(t) === JSON.stringify(thinkMemo[model] === undefined ? THINK[0] : thinkMemo[model])));
+    for (let k = start; k < THINK.length; k++) {
+      const body = structuredClone(base);
+      if (THINK[k]) body.generationConfig.thinkingConfig = THINK[k];
+      countRequest();
+      try {
+        const out = await gemini(model, body);
+        if (JSON.stringify(thinkMemo[model]) !== JSON.stringify(THINK[k])) { thinkMemo[model] = THINK[k]; try { localStorage.setItem(THINK_KEY, JSON.stringify(thinkMemo)); } catch (e) { } }
+        return out;
+      } catch (e) {
+        // Réglage de réflexion refusé (souvent un simple « invalid argument ») : réglage suivant
+        if (e.status === 400 && !/API key/i.test(e.message) && k < THINK.length - 1) continue;
+        throw e;
+      }
+    }
+  }
+
   async function callGemini(system, messages, schema) {
     const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
-    const gen = { temperature: 0.8, thinkingConfig: { thinkingBudget: 0 } };
+    const gen = { temperature: 0.8 };
     if (schema) { gen.responseMimeType = 'application/json'; gen.responseSchema = schema; }
     const body = { systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: gen };
 
     const chosen = Store.settings.geminiModel || GEMINI_FALLBACKS[0];
-    const models = [chosen, ...GEMINI_FALLBACKS.filter(m => m !== chosen)];
-    let lastErr;
+    const models = [chosen, ...GEMINI_FALLBACKS.filter(m => m !== chosen)].filter(m => !deadModels.has(m));
+    const errors = [];
     for (const model of models) {
-      try {
-        countRequest();
-        try { return await gemini(model, body); }
-        catch (e) {
-          // Certains modèles refusent de désactiver la réflexion (parfois avec un simple « invalid argument ») : on réessaie sans.
-          if (e.status === 400 && !/API key/i.test(e.message)) {
-            const b2 = structuredClone(body); delete b2.generationConfig.thinkingConfig;
-            countRequest();
-            return await gemini(model, b2);
-          }
-          throw e;
-        }
-      } catch (e) {
-        lastErr = e;
+      try { return await geminiModel(model, body); }
+      catch (e) {
+        errors.push(e);
+        if (e.status === 404) deadModels.add(model);
         if (e.status === 429 || e.status === 404 || e.status === 503) { console.warn(`Modèle ${model} indisponible (${e.status}), essai suivant`); continue; }
         throw e;
       }
     }
-    throw lastErr;
+    // Message le plus utile : quota épuisé ou surcharge plutôt qu'un vieux modèle introuvable
+    const main = errors.find(e => e.status === 429) || errors.find(e => e.status === 503) || errors[0];
+    if (main && main.status === 429) throw new AIError('Quota gratuit atteint pour le moment sur tous les modèles. Réessaie dans une minute (ou demain si la limite du jour est atteinte).', 429);
+    throw main || new AIError('Aucun modèle disponible', 503);
   }
 
   async function callOpenAI(system, messages, schema) {

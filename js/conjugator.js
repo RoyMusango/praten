@@ -179,5 +179,13 @@
     };
   }
 
-  global.Conj = { VERBS, BY_INF, PERSONS, PERSONS_SHORT, conjugate, TRAIN, NAMES, TOPIC, PRIORITY, CONTEXT_TOPIC: null, makeItem, genItem, itemTable, verbView };
+  // Aide avant de répondre (débutant complet) : la règle en une ligne, avec un verbe modèle
+  const RULES = {
+    presens: 'ik = radical (ik werk) · jij, u, hij, zij = radical + t (jij werkt) · wij, jullie, zij (ils) = infinitif (wij werken). Irréguliers fréquents : zijn (ik ben, jij bent, hij is), hebben (ik heb, jij hebt, hij heeft).',
+    vraag: 'Pour une question, le verbe passe en premier : Werkt hij? · Avec jij (après le verbe), le -t tombe : Werk jij? Mais Werkt u?',
+    perfectum: 'hebben (ou zijn) conjugué + participe ge-…-t / ge-…-d : ik heb gewerkt, wij hebben gespeeld. Les verbes de déplacement ou de changement prennent zijn : ik ben gegaan.',
+    toekomst: 'gaan conjugué + infinitif à la fin : ik ga werken, jij gaat werken, wij gaan werken.',
+    imperfectum: 'Verbes réguliers : radical + te / de (ik werkte, wij werkten). Les verbes forts changent de voyelle : ik ging, ik was.',
+  };
+  global.Conj = { VERBS, BY_INF, PERSONS, PERSONS_SHORT, conjugate, TRAIN, NAMES, TOPIC, PRIORITY, CONTEXT_TOPIC: null, RULES, makeItem, genItem, itemTable, verbView };
 })(typeof window !== 'undefined' ? window : globalThis);
