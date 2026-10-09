@@ -9,13 +9,23 @@
   --font: 'Jost', 'Futura', 'Century Gothic', system-ui, sans-serif;
   --wrap: 1080px;
 }
+/* Thème : automatique (système), ou forcé par le bouton de l'en-tête (data-theme) */
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0e0e0f; --surface: #18181a; --surface-2: #222225; --ink: #f3f2ef; --ink-2: #c9c7c2; --muted: #8d8b87; --line: #2b2b2e;
     --gold: #f2c94c;
     --good: #5fd39a; --good-bg: #13261c; --bad: #ff7a70; --bad-bg: #2c1514;
     --btn: #f3f2ef; --btn-ink: #0e0e0f;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+    --bg: #0e0e0f; --surface: #18181a; --surface-2: #222225; --ink: #f3f2ef; --ink-2: #c9c7c2; --muted: #8d8b87; --line: #2b2b2e;
+    --gold: #f2c94c;
+    --good: #5fd39a; --good-bg: #13261c; --bad: #ff7a70; --bad-bg: #2c1514;
+    --btn: #f3f2ef; --btn-ink: #0e0e0f;
 }
 
 * { box-sizing: border-box; }

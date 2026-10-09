@@ -161,7 +161,7 @@
     const p = pick(PERSON_WEIGHTS);
     const label = pick(SUBJ[p]), subj = bare(label);
     const a = presentAll(v, p).concat(subj === 'u' && v.inf === 'hebben' ? ['heeft'] : []);
-    return { q: `${cap(label)} ___ ${v.c}.`, hint: `${v.inf} (${v.fr}) au présent`, a, verb: v.inf, tense: 'presens', p };
+    return { q: `${cap(label)} (${v.inf}) ___ ${v.c}.`, hint: `${v.inf} (${v.fr}) au présent`, a, verb: v.inf, tense: 'presens', p };
   }
 
   function itemTable(it) {

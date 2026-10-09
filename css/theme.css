@@ -1,3 +1,4 @@
 /* Couleurs propres à l'app : Pays-Bas */
 :root { --accent: #e8590c; --accent-2: #21468b; --brand-mark: linear-gradient(180deg, #ae1c28 33%, #ffffff 33% 66%, #21468b 66%); }
-@media (prefers-color-scheme: dark) { :root { --accent: #ff8c42; --accent-2: #6d8fe0; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: #ff8c42; --accent-2: #6d8fe0; } }
+:root[data-theme="dark"] { --accent: #ff8c42; --accent-2: #6d8fe0; }
