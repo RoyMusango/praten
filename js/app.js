@@ -891,9 +891,11 @@
         return;
       }
       const it = items[i];
+      // Jamais de trou sans consigne : à défaut d'indication propre, celle du point de grammaire
+      const hint = it.hint || (!it.opts && GRAMMAR.TOPICS[id].hint);
       box.innerHTML = `<div class="trainer"><div class="meta"><span>Exercice</span><div class="meter"><i style="width:${i / items.length * 100}%"></i></div><span>${i + 1} / ${items.length}</span></div>
         <div class="prompt" style="font-size:1.5rem">${esc(it.q).replace('___', '<span class="blank">___</span>')}</div>
-        <div class="prompt-sub">${it.hint ? esc(it.hint) : '&nbsp;'}</div>
+        <div class="prompt-sub">${hint ? esc(hint) : '&nbsp;'}</div>
         ${it.opts ? `<div class="opts">${shuffle(it.opts).map(o => `<button class="btn quiet" data-opt="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : `
         <div class="answer-row"><button class="mic" id="gMic"></button><input id="gIn" autocomplete="off" placeholder="Ta réponse"><button class="btn" id="gCheck">Vérifier</button></div>`}
         <div id="gRes"></div></div>`;

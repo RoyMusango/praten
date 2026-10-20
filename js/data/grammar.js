@@ -142,6 +142,7 @@
 
   T.meervoud = {
     label: 'Le pluriel', level: 'A1',
+    hint: 'Pluriel du nom',
     fiche: `
 <p>Deux terminaisons :</p>
 <ul><li><b>-en</b> (la plupart) : <i>de boek → de boek<b>en</b></i>, <i>de les → de less<b>en</b></i> (on double la consonne après voyelle courte), <i>de straat → de strat<b>en</b></i> (voyelle longue : on la simplifie).</li>
@@ -254,6 +255,7 @@
 
   T.getallen = {
     label: 'Nombres et heure', level: 'A1',
+    hint: 'Le nombre en toutes lettres',
     fiche: `
 <p>Après 20, on dit les unités d’abord : <i>21 = <b>een</b>en<b>twintig</b></i> (un-et-vingt), <i>35 = vijfendertig</i>.</p>
 <p><b>L’heure</b> : piège n°1 pour un francophone ! <b>half drie</b> = <b>2 h 30</b> (la moitié <i>vers</i> trois heures).</p>
@@ -277,7 +279,7 @@
 <p><b>u</b> : inconnus plus âgés, clients, administration, professeurs (au début). Le verbe se conjugue comme avec <i>jij</i> : <i>u <b>bent</b>, u <b>werkt</b></i> ; avec <i>hebben</i> : <i>u <b>hebt</b></i> ou <i>u <b>heeft</b></i>.</p>
 <p>Formules polies : <i>alstublieft</i> (vous) / <i>alsjeblieft</i> (tu), <i>dank u wel</i> / <i>dank je wel</i>, <i>Mag ik…? Kunt u…?</i></p>`,
     bank: [
-      { q: 'À un serveur âgé : « ___ u mij helpen? »', a: ['kunt', 'kan'] },
+      { q: 'À un serveur âgé : « ___ u mij helpen? »', hint: 'kunnen avec u (pouvez-vous)', a: ['kunt', 'kan'] },
       { q: 'À un ami : « Dank ___ wel! »', a: ['je'], opts: ['je', 'u'] },
       { q: 'À un client : « Dank ___ wel! »', a: ['u'], opts: ['je', 'u'] },
       { q: 'S’il vous plaît : « ___ »', a: ['alstublieft'], opts: ['alsjeblieft', 'alstublieft'] },
