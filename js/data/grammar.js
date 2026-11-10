@@ -116,8 +116,10 @@
       { q: 'Choisis l’ordre correct :', a: ['Ik leer Nederlands omdat ik in Gent woon.'], opts: ['Ik leer Nederlands omdat ik woon in Gent.', 'Ik leer Nederlands omdat ik in Gent woon.'] },
       { q: 'Choisis l’ordre correct :', a: ['Ik ga morgen voetbal kijken.'], opts: ['Ik ga kijken morgen voetbal.', 'Ik ga morgen voetbal kijken.'] },
       { q: 'Om negen uur ___ de les. (beginnen)', a: ['begint'] },
+      { q: 'Na het werk ___ ik naar huis. (gaan)', a: ['ga'] },
+      { q: 'Choisis l’ordre correct :', a: ['Ik denk dat hij morgen komt.'], opts: ['Ik denk dat hij komt morgen.', 'Ik denk dat hij morgen komt.'] },
     ],
-    speak: ['Wat ga je morgen doen? Begin je zin met « Morgen… ».'],
+    speak: ['Wat ga je morgen doen? Begin je zin met « Morgen… ».', 'Wat doe je na het werk? Begin met « Na het werk… ».'],
   };
 
   T.negatie = {
@@ -136,8 +138,10 @@
       { q: 'Hij heeft ___ auto.', a: ['geen'], opts: ['niet', 'geen'] },
       { q: 'Ik begrijp het ___.', a: ['niet'], opts: ['niet', 'geen'] },
       { q: 'Wij spreken ___ Duits.', a: ['geen'], opts: ['niet', 'geen'], expl: 'Une langue sans article : geen. (« niet » est aussi entendu à l’oral.)' },
+      { q: 'Ik ben ___ moe.', a: ['niet'], opts: ['niet', 'geen'] },
+      { q: 'Er is ___ melk meer.', a: ['geen'], opts: ['niet', 'geen'] },
     ],
-    speak: ['Wat doe je niet graag? Wat heb je niet?'],
+    speak: ['Wat doe je niet graag? Wat heb je niet?', 'Wat heb je niet in huis? Wat eet je nooit?'],
   };
 
   T.meervoud = {
@@ -156,7 +160,11 @@
       { q: 'de straat → de ___', a: ['straten'] },
       { q: 'het kind → de ___', a: ['kinderen'] },
       { q: 'de computer → de ___', a: ['computers'] },
+      { q: 'de fiets → de ___', a: ['fietsen'] },
+      { q: 'het café → de ___', a: ['cafés', 'cafes'] },
+      { q: 'de vriend → de ___', a: ['vrienden'] },
     ],
+    speak: ['Wat zie je in je straat? Gebruik meervouden: twee fietsen, drie cafés…', 'Hoeveel broers en zussen heb je?'],
   };
 
   T.bijvoeglijk = {
@@ -176,7 +184,10 @@
       { q: 'een ___ bier (koud)', a: ['koud'] },
       { q: 'De koffie is ___. (lekker)', a: ['lekker'] },
       { q: 'de ___ collega’s (leuk)', a: ['leuke'] },
+      { q: 'het ___ weer (mooi)', a: ['mooie'] },
+      { q: 'een ___ man (oud)', a: ['oude'] },
     ],
+    speak: ['Beschrijf je stad: een mooie stad, een groot station…', 'Hoe is je kamer? Groot, klein, licht?'],
   };
 
   T.perfectum = {
@@ -217,6 +228,8 @@
       { q: 'Wij ___ morgen werken. (devoir)', a: ['moeten'] },
       { q: 'Hij ___ goed koken. (savoir, pouvoir)', a: ['kan'] },
       { q: 'Ik wil Nederlands ___. (leren)', a: ['leren'] },
+      { q: 'Je ___ hier niet roken. (avoir le droit, jij)', a: ['mag'] },
+      { q: 'Zij ___ vandaag naar de dokter. (devoir, elle)', a: ['moet'] },
     ],
     speak: ['Wat wil je dit jaar leren? Wat moet je deze week doen?'],
   };
@@ -233,7 +246,11 @@
       { q: 'Ik moet vroeg ___. (opstaan)', a: ['opstaan'] },
       { q: 'Hij is om zes uur ___. (opstaan, passé)', a: ['opgestaan'] },
       { q: 'Neem je een paraplu ___? (meenemen)', a: ['mee'] },
+      { q: 'Ik ___ de deur dicht. (dichtdoen)', a: ['doe'] },
+      { q: 'Hij komt morgen ___. (terugkomen)', a: ['terug'] },
+      { q: 'Ik heb hem gisteren ___. (opbellen, passé)', a: ['opgebeld'] },
     ],
+    speak: ['Hoe laat sta je op? Wat neem je mee naar je werk?'],
   };
 
   T.bezittelijk = {
@@ -250,7 +267,10 @@
       { q: '___ huis is klein. (notre, het huis)', a: ['ons'] },
       { q: '___ kamer is groot. (notre, de kamer)', a: ['onze'] },
       { q: 'Is dit ___ fiets? (ta)', a: ['jouw', 'je'] },
+      { q: '___ ouders wonen in Gent. (mes)', a: ['mijn'] },
+      { q: 'Waar is ___ tas, meneer? (votre, poli)', a: ['uw'] },
     ],
+    speak: ['Vertel over je familie: mijn broer, zijn werk, haar hobby…'],
   };
 
   T.getallen = {
@@ -269,7 +289,10 @@
       { q: 'kwart over vier = 4 h ___', a: ['15'], opts: ['15', '45'] },
       { q: '12 = ___', a: ['twaalf'] },
       { q: 'half negen = ___ h 30', a: ['8', 'huit'], opts: ['8', '9'] },
+      { q: '47 = ___', a: ['zevenenveertig'] },
+      { q: 'kwart voor tien = 9 h ___', a: ['45'], opts: ['15', '45'] },
     ],
+    speak: ['Hoe laat sta je op? Hoe laat begin je met werken?'],
   };
 
   T.registro = {
@@ -284,7 +307,11 @@
       { q: 'À un client : « Dank ___ wel! »', a: ['u'], opts: ['je', 'u'] },
       { q: 'S’il vous plaît : « ___ »', a: ['alstublieft'], opts: ['alsjeblieft', 'alstublieft'] },
       { q: 'Avec u : « Waar ___ u? » (wonen)', a: ['woont'] },
+      { q: 'À ton professeur : « Hoe gaat het met ___? »', a: ['u'], opts: ['jou', 'u'] },
+      { q: 'À un ami : « Heb ___ tijd? »', a: ['je'], opts: ['je', 'u'] },
+      { q: 'Au guichet : « Wat ___ u? » (wensen)', a: ['wenst'] },
     ],
+    speak: ['Stel je voor aan een nieuwe collega (u), en daarna aan een vriend (jij).'],
   };
 
   // Points de grammaire dans l'ordre d'apprentissage ; autres sujets utilisés par l'IA pour classer ses corrections

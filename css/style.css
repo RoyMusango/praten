@@ -59,7 +59,7 @@ svg.i { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; }
 .muted { color: var(--muted); }
 .small { font-size: .875rem; }
 .err { color: var(--bad); }
-.hidden { display: none !important; }
+.hidden, [hidden] { display: none !important; }
 .eyebrow { font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: .7rem; display: inline-flex; align-items: center; gap: 8px; }
 .eyebrow.accent { color: var(--accent); }
 .page-head > .eyebrow::before, .today-head .eyebrow::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--brand-mark); }

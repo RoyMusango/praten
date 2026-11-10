@@ -201,7 +201,7 @@
     btn.innerHTML = icon('mic');
     if (!Speech.supported) { btn.title = 'Micro indisponible : utilise Chrome ou Edge'; btn.disabled = true; return null; }
     const l = new Speech.Listener({
-      onText: (fin, interim) => { input.value = (fin + ' ' + interim).trim(); },
+      onText: (fin, interim) => { input.value = (fin + ' ' + interim).trim(); input.dispatchEvent(new Event('input')); },
       onState: on => { btn.classList.toggle('rec', on); btn.innerHTML = icon(on ? 'stop' : 'mic'); },
       onAutoStop: txt => onDone && onDone(txt),
     });
@@ -514,14 +514,22 @@
     let i = 0;
     view.innerHTML = head('Parler sans IA', 'Oral guidé', 'Réponds à voix haute au moins une minute à chaque question. Relis ensuite ta transcription en t’appuyant sur la fiche.') + `
       <div class="trainer"><span class="eyebrow accent" id="oTopic"></span><div class="prompt" id="oQ"></div>
+        <div class="prompt-sub">Formes à placer dans ta réponse : elles s’allument quand tu les dis.</div><div class="chips" id="oKeys" style="justify-content:center"></div>
         <button class="mic big" id="oMic"></button>
         <textarea id="oTxt" rows="5" placeholder="Ta transcription s’affichera ici"></textarea>
         <div class="row"><button class="btn ghost" id="oFiche">Voir la fiche</button><button class="btn" id="oNext">Question suivante ${icon('arrow')}</button></div></div>`;
     const show = () => {
       const p = prompts[i % prompts.length];
       $('#oTopic').textContent = topicLabel(p.id); $('#oQ').textContent = p.q; $('#oTxt').value = '';
+      // Formes cibles : réponses courtes de la banque d'exercices de la fiche
+      const t = GRAMMAR.TOPICS[p.id];
+      const pool = [...(t.bank || []), ...(t.gen && Conj.genItem ? Array.from({ length: 8 }, () => Conj.genItem(t.gen, { pick })) : [])];
+      const keys = [...new Set(pool.map(it => it.a[0]).filter(a => a && a.length <= 18 && !/→|\.$/.test(a)))];
+      $('#oKeys').innerHTML = shuffle(keys).slice(0, 6).map(k => `<span class="chip" data-key="${esc(norm(k))}">${esc(k)}</span>`).join('');
       Speech.speak(p.q);
     };
+    const markKeys = () => { const t = ' ' + norm($('#oTxt').value) + ' '; $$('#oKeys [data-key]').forEach(c => c.classList.toggle('on', t.includes(' ' + c.dataset.key + ' '))); };
+    $('#oTxt').addEventListener('input', markKeys);
     micFor($('#oMic'), $('#oTxt'));
     $('#oNext').onclick = () => { if (currentListener) currentListener.stop(); i++; show(); };
     $('#oFiche').onclick = () => { const p = prompts[i % prompts.length]; modal(`<span class="eyebrow">Fiche</span><h2>${esc(topicLabel(p.id))}</h2><div class="fiche" style="margin-top:16px">${GRAMMAR.TOPICS[p.id].fiche}</div>`); };
@@ -564,7 +572,10 @@
     let queue = buildVocabQueue();
     const total = queue.length;
     const retry = new Set(), firstTry = {};
-    let cur = null, answered = false, prevCard = null;
+    let cur = null, answered = false, prevCard = null, rev = false;
+    // Sens inverse (compréhension) pour les mots courts déjà bien ancrés
+    const reversible = w => !/\.\.\.|…|\?/.test(w.tl) && w.tl.split(/\s+/).length <= 3 && w.fr.length <= 40;
+    const frAnswers = w => w.fr.split(/[,;/]| ou /).map(x => x.replace(/\(.*?\)/g, '').trim()).filter(Boolean);
     view.innerHTML = head('Vocabulaire', esc(N.words), 'Révision espacée : chaque mot revient juste avant que tu l’oublies. Dis la réponse à voix haute, c’est ce qui l’ancre.') + vocabTabs('') + '<div class="trainer" id="flash"></div>';
     const box = $('#flash');
     function next() {
@@ -578,15 +589,17 @@
       const doneN = total - queue.length - 1;
       // Pour un débutant, un mot nouveau est d'abord montré et entendu avant d'être demandé
       const showFirst = isNew && L.introduceNewWords;
+      rev = !isNew && Store.card(cur.id).box >= 3 && reversible(cur) && Math.random() < 0.3;
       box.innerHTML = `
         <div class="meta"><span>${esc(themeLabel(cur.theme))}</span><div class="meter"><i style="width:${Math.min(100, doneN / Math.max(1, total) * 100)}%"></i></div><span>${isNew ? '<span class="tag new">Nouveau</span>' : `${queue.length} restant${queue.length > 1 ? 's' : ''}`}</span></div>
-        <span class="eyebrow">${esc(T.inLang)}</span>
-        <div class="prompt">${esc(cur.fr)}</div>
-        <div class="prompt-sub">${showFirst ? `<button class="link" id="vPeek">Écouter le mot avant de répondre</button>` : '&nbsp;'}</div>
+        <span class="eyebrow">${rev ? 'En français' : esc(T.inLang)}</span>
+        <div class="prompt">${rev ? `${esc(cur.tl)} ${sayBtn(speakable(cur.tl))}` : esc(cur.fr)}</div>
+        <div class="prompt-sub">${rev ? 'Écoute, puis donne le sens en français' : showFirst ? `<button class="link" id="vPeek">Écouter le mot avant de répondre</button>` : '&nbsp;'}</div>
         <div class="answer-row"><button class="mic" id="vMic"></button><input id="vIn" autocomplete="off" placeholder="Dis-le ou écris-le"><button class="btn" id="vCheck">Vérifier</button></div>
         <div class="row"><button class="link small" id="vSkip">Je ne sais pas</button></div>
         <div id="vRes"></div>`;
       const inp = $('#vIn'); inp.focus();
+      if (rev) { inp.placeholder = 'Le sens en français'; $('#vMic').hidden = true; Speech.speak(speakable(cur.tl)); }
       const peek = $('#vPeek');
       if (peek) peek.onclick = () => { peek.parentElement.innerHTML = `<b>${esc(cur.tl)}</b> ${sayBtn(speakable(cur.tl))} <span class="muted">· répète-le, puis réponds</span>`; Speech.speak(speakable(cur.tl)); };
       micFor($('#vMic'), inp, { onDone: () => check(), autoSend: true });
@@ -597,7 +610,7 @@
     function check(skip) {
       if (answered) return next();
       answered = true;
-      const res = skip ? 'wrong' : compare($('#vIn').value, [cur.tl, ...cur.syn], { loose: true });
+      const res = skip ? 'wrong' : compare($('#vIn').value, rev ? frAnswers(cur) : [cur.tl, ...cur.syn], { loose: true });
       const ok = res !== 'wrong';
       if (!(cur.id in firstTry)) {
         firstTry[cur.id] = ok;
@@ -611,6 +624,7 @@
       const label = { ok: 'Correct', accents: 'Correct, attention aux accents', typo: 'Presque : petite faute de frappe', wrong: skip ? 'La réponse' : 'Pas tout à fait' }[res];
       $('#vRes').innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${label}</span>
         <div class="solution">${esc(cur.tl)} ${sayBtn(speakable(cur.tl))}</div>
+        ${rev ? `<div class="syn">${esc(cur.fr)}</div>` : ''}
         ${cur.note ? `<div class="syn">${esc(cur.note)}</div>` : ''}
         ${cur.syn.length ? `<div class="syn">Pour varier : ${cur.syn.map(s => `<b>${esc(s)}</b>`).join(', ')}</div>` : ''}
         ${!ok ? '<p class="muted small" style="margin-top:10px">Répète la réponse deux fois à voix haute avant de continuer.</p>' : ''}
@@ -642,7 +656,7 @@
       if (currentListener) currentListener.stop();
       answered = false;
       if (i >= items.length) {
-        box.innerHTML = `<div class="done-box"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div><div class="row"><button class="btn" id="again">Nouvelle série</button></div></div>`;
+        box.innerHTML = `<div class="done-box"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div><p class="muted" style="margin-top:14px">${scoreMsg(score, items.length, 'Normal au début : les synonymes reviennent à chaque série. Répète-les à voix haute.')}</p><div class="row"><button class="btn" id="again">Nouvelle série</button></div></div>`;
         $('#again').onclick = () => synonymTrainer();
         return;
       }
@@ -740,7 +754,7 @@
       const box = $('#vt');
       if (i >= items.length) {
         Store.day().exercises++; Store.save();
-        box.innerHTML = `<div class="done-box trainer"><span class="eyebrow">Série terminée</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div><div class="row"><button class="btn" id="again">Nouvelle série</button></div></div>`;
+        box.innerHTML = `<div class="done-box trainer"><span class="eyebrow">Série terminée</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div><p class="muted" style="margin-top:14px">${scoreMsg(score, items.length, 'Ouvre l’aide sous chaque question et relis le tableau de conjugaison avant de recommencer.')}</p><div class="row"><button class="btn" id="again">Nouvelle série</button></div></div>`;
         $('#again').onclick = start; side();
         return;
       }
@@ -876,6 +890,12 @@
     runExercises(id, $('#ex'));
   }
 
+  // Message de fin de série : viser 70 à 85 % de réussite
+  function scoreMsg(score, total, low) {
+    const r = score / Math.max(1, total);
+    return r >= 0.8 ? 'Très bien. Passe maintenant à l’oral pour l’utiliser en situation.' : r >= 0.5 ? 'C’est en bonne voie. Une série de plus pour consolider.' : low;
+  }
+
   function runExercises(id, box) {
     let items = buildExercises(id), i = 0, score = 0, answered = false;
     function show() {
@@ -885,7 +905,7 @@
         Store.day().exercises++; Store.save();
         const s = SCENARIOS.filter(x => x.targets.includes(id));
         box.innerHTML = `<div class="done-box trainer"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div>
-          <p class="muted" style="margin-top:14px">${score >= 8 ? 'Très bien. Passe maintenant à l’oral pour l’utiliser en situation.' : score >= 5 ? 'C’est en bonne voie. Une série de plus pour consolider.' : 'Relis la fiche à gauche, puis recommence une série.'}</p>
+          <p class="muted" style="margin-top:14px">${scoreMsg(score, items.length, 'Relis la fiche à gauche, puis recommence une série.')}</p>
           <div class="row"><button class="btn" id="again">Nouvelle série</button>${s.length ? `<a class="btn ghost" href="#speak/${pick(s).id}">Pratiquer à l’oral</a>` : ''}</div></div>`;
         $('#again', box).onclick = () => { items = buildExercises(id); i = 0; score = 0; show(); };
         return;
@@ -925,8 +945,10 @@
         <div class="solution" style="font-size:1.2rem">${esc(full)} ${it.noSay || /→/.test(it.q) ? '' : sayBtn(full)}</div>
         ${it.a.length > 1 ? `<p class="small muted">Aussi accepté : ${it.a.filter(x => x !== shown).map(esc).join(', ')}</p>` : ''}
         ${it.expl ? `<p class="small">${esc(it.expl)}</p>` : ''}
-        ${table ? `<details><summary class="small">${esc(table.title)}</summary><table>${table.rows.map(r => `<tr class="${r[2] ? 'hl' : ''}"><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></details>` : ''}
+        ${table ? `<details ${ok ? '' : 'open'}><summary class="small">${esc(table.title)}</summary><table>${table.rows.map(r => `<tr class="${r[2] ? 'hl' : ''}"><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></details>` : ''}
+        ${ok ? '' : '<p class="muted small" style="margin-top:10px">Répète la phrase complète à voix haute avant de continuer.</p>'}
         <div class="row"><button class="btn" id="gNext">Suivant ${icon('arrow')}</button></div></div>`;
+      if (!ok && !it.noSay && !/→/.test(it.q)) Speech.speak(full);
       $('#gNext', box).onclick = () => { i++; show(); };
       $('#gNext', box).focus();
     }
@@ -1095,7 +1117,7 @@
       <div class="two-col" style="margin-top:20px">
         <div class="panel"><span class="eyebrow">Grammaire</span><p class="muted small">Coche les points où tu te sens faible : ils passent en priorité.</p>
           ${GRAMMAR.ORDER.map(id => { const t = Store.topic(id), p = pct(t.score); return `<label class="check" style="display:grid;grid-template-columns:auto 1fr 90px;gap:12px"><input type="checkbox" data-weak="${id}" ${Store.state.weakSelf.includes(id) ? 'checked' : ''}><span>${esc(topicLabel(id))}${errCount[id] ? ` <span class="muted small">· ${errCount[id]} erreur${errCount[id] > 1 ? 's' : ''} à l’oral</span>` : ''}</span><span class="meter ${t.n ? meterCls(p) : ''}"><i style="width:${t.n ? p : 0}%"></i></span></label>`; }).join('')}</div>
-        <div><div class="panel"><span class="eyebrow">${esc(T.verbsEyebrow)}</span>${Conj.TRAIN.map(t => { const x = Store.conjTense(t), p = pct(x.score); return `<div style="display:grid;grid-template-columns:1fr 90px;gap:12px;align-items:center;margin:10px 0"><span>${esc(Conj.NAMES[t])}</span><span class="meter ${x.n ? meterCls(p) : ''}"><i style="width:${x.n ? p : 0}%"></i></span></div>`; }).join('')}</div>
+        <div><div class="panel"><span class="eyebrow">${esc(T.verbsEyebrow)}</span>${Conj.TRAIN.map(t => { const x = Store.conjTense(t), p = pct(x.score); return `<div style="display:grid;grid-template-columns:1fr 90px;gap:12px;align-items:center;margin:10px 0"><span>${esc(Conj.NAMES[t])}</span><span class="meter ${x.n ? meterCls(p) : ''}"><i style="width:${x.n ? p : 0}%"></i></span></div>`; }).join('')}${Store.troubleVerbs().length ? `<p class="small" style="margin-top:16px">Verbes difficiles : ${Store.troubleVerbs().slice(0, 10).map(v => `<a class="link" href="#grammar/conjugator/${encodeURIComponent(v)}">${esc(v)}</a>`).join(', ')}</p>` : ''}</div>
           <div class="panel"><span class="eyebrow">Dernières erreurs à l’oral</span>${errs.length ? errs.map(c => `<div class="fix"><s>${esc(c.original)}</s> <b>${esc(c.corrected)}</b><span class="why">${esc(topicLabel(c.topic))}</span></div>`).join('') : '<p class="muted">Rien pour l’instant.</p>'}</div></div>
       </div>
       <div class="panel" style="margin-top:20px"><span class="eyebrow">Sauvegarde</span><p class="muted small">Tes progrès sont stockés dans ce navigateur${Sync.enabled() ? ' et synchronisés avec ton dépôt privé' : ''}. Tu peux aussi les exporter.</p>
