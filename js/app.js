@@ -30,9 +30,22 @@
     bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
     target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
     flame: '<path d="M12 3c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8z"/>',
+    // Rubriques
+    today: '<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/>',
+    speak: '<path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/>',
+    words: '<rect x="3.5" y="7.5" width="13" height="12.5" rx="2.5"/><path d="M7.5 4.5H18A2.5 2.5 0 0 1 20.5 7v10"/>',
+    verbs: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="m14.5 7.5 3 3"/>',
+    sounds: '<path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/>',
+    grammar: '<path d="M5 4.5h10.5A2.5 2.5 0 0 1 18 7v13H7.5A2.5 2.5 0 0 1 5 17.5z"/><path d="M5 17.5A2.5 2.5 0 0 1 7.5 15H18"/>',
+    read: '<path d="M12 6.5C10 5 7.5 4.5 4 4.5v13c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-13c-3.5 0-6 .5-8 2zM12 6.5v13"/>',
+    progress: '<path d="M5 20v-8M12 20V4M19 20v-5"/>',
+    more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   };
+  ICONS.settings = ICONS.gear;
   const icon = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>`;
-  const sayBtn = (text, title = 'Écouter') => `<button class="say" data-say="${esc(text)}" title="${title}">${icon('sound')}</button>`;
+  const sayBtn = (text, title = 'Écouter') => `<button class="say" data-say="${esc(text)}" title="${title}" aria-label="${title}">${icon('sound')}</button>`;
+  // Version riche (ordinateur) ou légère (téléphone, tablette, animations réduites) : classe posée par index.html
+  const FX = () => document.documentElement.classList.contains('fx');
   // Vitesse de lecture : réglable partout (menu de l'en-tête) et en boutons dans la conversation et la lecture
   const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
   const isRate = r => Math.abs(S().ttsRate - r) < 0.01;
@@ -49,13 +62,25 @@
   document.title = L.title;
   $('.brand').innerHTML = `<span class="brand-mark"></span>${esc(L.appName)}`;
   const NAV = ['today', 'speak', 'words', 'verbs', ...(SOUNDS_ON ? ['sounds'] : []), 'grammar', 'read', 'progress'];
-  $('#nav').innerHTML = NAV.map(k => `<a href="#${k}" data-view="${k}">${esc(N[k])}</a>`).join('');
+  // Onglets du téléphone : les quatre rubriques de tous les jours (la prononciation d'abord pour un débutant)
+  const TABS = ['today', 'speak', 'words', SOUNDS_ON && L.soundsFirst ? 'sounds' : 'verbs'];
+  const MORE = [...NAV.filter(k => !TABS.includes(k)), 'settings'];
+  const navLink = k => `<a href="#${k}" data-view="${k}" class="${TABS.includes(k) ? 'tab' : ''}">${icon(k)}<span>${esc(N[k])}</span></a>`;
+  $('#nav').innerHTML = NAV.map(navLink).join('') + `<button class="more-btn" id="moreBtn" type="button" aria-expanded="false">${icon('more')}<span>Plus</span></button>`;
+  $('#moreBox').innerHTML = MORE.map(navLink).join('');
+  const closeMore = () => { $('#moreSheet').classList.add('hidden'); $('#moreBtn').setAttribute('aria-expanded', 'false'); };
+  $('#moreBtn').onclick = () => { const hidden = $('#moreSheet').classList.toggle('hidden'); $('#moreBtn').setAttribute('aria-expanded', String(!hidden)); };
+  $('#moreSheet').addEventListener('click', closeMore);
   $('#gearLink').href = '#settings';
   $('#gearLink').innerHTML = icon('gear');
   // Mode clair / sombre : partagé par les trois apps (même adresse), sinon celui du système
   const THEME_KEY = 'applangues-theme';
   const darkNow = () => (document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
-  function paintThemeBtn() { const d = darkNow(); $('#themeBtn').innerHTML = icon(d ? 'sun' : 'moon'); $('#themeBtn').title = d ? 'Passer en mode clair' : 'Passer en mode sombre'; }
+  function paintThemeBtn() {
+    const d = darkNow(), label = d ? 'Passer en mode clair' : 'Passer en mode sombre';
+    $('#themeBtn').innerHTML = icon(d ? 'sun' : 'moon'); $('#themeBtn').title = label; $('#themeBtn').setAttribute('aria-label', label);
+    const meta = $('meta[name="theme-color"]'); if (meta) meta.content = d ? '#100f14' : '#f6f4ef';
+  }
   $('#themeBtn').onclick = () => {
     const t = darkNow() ? 'light' : 'dark';
     document.documentElement.dataset.theme = t;
@@ -108,7 +133,7 @@
     chip.classList.toggle('done', m >= goal);
     const ss = Sync.enabled() ? Sync.status.state : 'off';
     const sTitle = { ok: 'Synchronisé', syncing: 'Synchronisation…', error: 'Synchro en erreur : ' + (Sync.status.error || ''), off: 'Synchro désactivée' }[ss];
-    chip.innerHTML = `<span>${m} / ${goal} min</span><span class="mini"><i style="width:${Math.min(100, m / goal * 100)}%"></i></span>${ss !== 'off' ? `<span class="sync-dot ${ss}" title="${esc(sTitle)}"></span>` : ''}`;
+    chip.innerHTML = `<span class="chip-label">Aujourd’hui</span><span class="chip-txt"><b>${m}</b> / ${goal} min</span><span class="mini"><i style="width:${Math.min(100, m / goal * 100)}%"></i></span>${ss !== 'off' ? `<span class="sync-dot ${ss}" title="${esc(sTitle)}"></span>` : ''}`;
   }
   window.addEventListener('sync-status', () => updateChip());
   // Données reçues d'un autre appareil : on rafraîchit les pages de synthèse
@@ -152,13 +177,29 @@
   // ---------- Toast ----------
   function toast(html, ms = 6000) {
     const t = document.createElement('div');
-    t.className = 'notice warn';
-    t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:84px;z-index:50;width:min(560px, calc(100% - 32px));box-shadow:0 8px 24px rgba(0,0,0,.15)';
+    t.className = 'notice warn toast';
+    t.setAttribute('role', 'status');
     t.innerHTML = html;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), ms);
   }
   window.addEventListener('tts-missing', e => toast(esc(e.detail) + ' <a href="#settings" class="link">Réglages voix</a>', 9000));
+
+  // ---------- Effets (ordinateur uniquement) ----------
+  function countUp(el) {
+    const to = el ? +el.dataset.count : 0;
+    if (!el || !FX() || to < 2) return;
+    const t0 = performance.now(), dur = 900;
+    const tick = now => { const k = Math.min(1, (now - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1 && el.isConnected) requestAnimationFrame(tick); };
+    el.textContent = '0'; requestAnimationFrame(tick);
+  }
+  document.addEventListener('pointermove', e => {
+    if (!FX() || e.pointerType !== 'mouse') return;
+    const c = e.target.closest && e.target.closest('.step, .prio, .scn, .topic, .stat-row > div');
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive: true });
 
   // ---------- Routeur ----------
   const routes = {};
@@ -172,7 +213,9 @@
     document.body.classList.remove('in-chat');
     const parts = location.hash.slice(1).split('/');
     const r = routes[currentRoute()] ? currentRoute() : 'today';
-    $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.view === r));
+    $$('#nav a, #moreBox a').forEach(a => a.classList.toggle('active', a.dataset.view === r));
+    $('#moreBtn').classList.toggle('active', MORE.includes(r));
+    closeMore();
     area = null;
     routes[r](parts[1], parts[2]);
     window.scrollTo(0, 0);
@@ -279,38 +322,62 @@
     else if (wt.s < Store.topic(weakT[0]).score) step2 = { href: '#verbs', desc: `Verbes ciblés : <b>${esc(Conj.NAMES[wt.t])}</b>${trouble.length ? `, avec tes verbes difficiles (${trouble.map(esc).join(', ')})` : ''}.` };
     else step2 = { href: '#grammar/' + weakT[0], desc: `Point faible du moment : <b>${esc(topicLabel(weakT[0]))}</b>.` };
 
-    const step = (n, key, title, desc, href, btn) => {
+    const step = (n, key, ico, title, desc, href, btn) => {
       const done = d.min[key], target = t[key], p = Math.min(100, done / target * 100);
-      return `<div class="step ${p >= 100 ? 'done' : ''}"><span class="num">${p >= 100 ? icon('check') : n}</span>
-        <h3>${title}</h3><span class="time">${Math.floor(done)} / ${target} min</span>
-        <div class="meter"><i style="width:${p}%"></i></div><p>${desc}</p>
+      return `<div class="step ${p >= 100 ? 'done' : ''}"><div class="step-top"><span class="step-ico">${icon(ico)}</span><span class="num">${p >= 100 ? icon('check') + ' Fait' : n}</span></div>
+        <h3>${title}</h3><p>${desc}</p>
+        <div class="step-foot"><div class="meter"><i style="width:${p}%"></i></div><span class="time">${Math.floor(done)} / ${target} min</span></div>
         <a class="btn ${p >= 100 ? 'quiet' : ''}" href="${href}">${btn} ${icon('arrow')}</a></div>`;
     };
+
+    // Bandeau du jour : anneau en trois couleurs (vocabulaire, grammaire, oral) et les sept derniers jours
+    const R = 52, C = 2 * Math.PI * R;
+    let acc = 0;
+    const arcs = ['vocab', 'gram', 'conv'].map(k => {
+      const len = Math.max(0, Math.min(d.min[k] / D, 1 - acc)) * C, start = acc * C;
+      acc += len / C;
+      return len > 0.5 ? `<circle class="a-${k}" cx="60" cy="60" r="${R}" style="stroke-dasharray:${len.toFixed(1)} ${C.toFixed(1)};stroke-dashoffset:${(-start).toFixed(1)}"/>` : '';
+    }).join('');
+    const week = Array.from({ length: 7 }, (_, k) => {
+      const day = Store.today(k - 6), m = Store.totalMin(day), p = Math.min(100, m / D * 100);
+      const lbl = new Date(day + 'T12:00:00').toLocaleDateString(L.locale, { weekday: 'narrow' });
+      return `<div class="wd ${k === 6 ? 'now' : ''} ${p >= 100 ? 'full' : ''}" title="${day} : ${Math.round(m)} min"><i style="--p:${p}%"></i>${esc(lbl)}</div>`;
+    }).join('');
+    const speakHref = AI.hasKey() ? '#speak/' + sugg[0].id : '#speak/oral';
+    const nextHref = d.min.vocab < t.vocab ? '#words' : d.min.gram < t.gram ? step2.href : speakHref;
+    const cta = total >= D ? ['#speak', 'Continuer à parler'] : [nextHref, total < 1 ? 'Commencer la séance' : 'Reprendre la séance'];
 
     // Expression du jour : choisie selon la date
     const pool = VOCAB.WORDS.filter(w => L.wotdThemes.includes(w.theme) && w.syn.length);
     const seed = [...Store.today()].reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
     const wotd = pool[Math.abs(seed) % pool.length];
 
-    const segs = ['vocab', 'gram', 'conv'].map(k => `<i class="${k}" style="width:${Math.min(100, d.min[k] / D * 100)}%"></i>`).join('');
     view.innerHTML = `
-      <div class="today-head">
-        <div><span class="eyebrow">Aujourd’hui ${streak() ? `· ${icon('flame')} ${streak()} jour${streak() > 1 ? 's' : ''} d’affilée` : ''}</span>
+      <section class="hero">
+        <div class="hero-main">
+          <span class="eyebrow">Aujourd’hui${streak() ? ` <span class="streak">${icon('flame')} ${streak()} jour${streak() > 1 ? 's' : ''} d’affilée</span>` : ''}</span>
           <h1>${esc(date.charAt(0).toUpperCase() + date.slice(1))}</h1>
-          <p class="lead">${total >= D ? 'Séance du jour terminée. Tout ce que tu fais maintenant, c’est du bonus.' : `Encore <b>${Math.ceil(left)} min</b> pour atteindre ton objectif. L’essentiel se joue à l’oral.`}</p></div>
-        <div class="big-num"><b>${Math.floor(total)}</b><span> / ${D} min</span></div>
-      </div>
-      <div class="day-meter">${segs}</div>
-      ${total < D && d.skip ? `<div class="notice" style="margin-top:24px">Rappels coupés pour aujourd’hui. <button class="link" id="unskip">Les réactiver</button></div>` : ''}
-      ${total >= D ? `<div class="notice done" style="margin-top:24px">Plus de rappel aujourd’hui pour le ${L.langNameFr}. Tu peux continuer si tu en as envie${AI.hasKey() ? ` : il te reste environ ${budget - req} requêtes IA, soit près de ${convAffordable} min de conversation.` : '.'}</div>` : ''}
-      ${AI.hasKey() ? '' : `<div class="notice" style="margin-top:24px">La conversation avec l’IA n’est pas encore activée. <a class="link" href="#settings">Ajoute ta clé Gemini gratuite</a>, c’est l’affaire de deux minutes. En attendant, l’oral guidé fonctionne hors ligne.</div>`}
+          <p class="lead">${total >= D ? 'Séance du jour terminée. Tout ce que tu fais maintenant, c’est du bonus.' : `Encore <b>${Math.ceil(left)} min</b> pour atteindre ton objectif. L’essentiel se joue à l’oral.`}</p>
+          <div class="hero-cta"><a class="btn light" href="${cta[0]}">${cta[1]} ${icon('arrow')}</a><div class="week" aria-label="Sept derniers jours">${week}</div></div>
+        </div>
+        <div class="hero-side">
+          <div class="ring" role="img" aria-label="${Math.floor(total)} minutes sur ${D}">
+            <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="${R}"/>${arcs}</svg>
+            <div class="ring-in"><b data-count="${Math.floor(total)}">${Math.floor(total)}</b><span>/ ${D} min</span></div>
+          </div>
+          <div class="ring-legend"><span><i class="l-vocab"></i>Vocabulaire</span><span><i class="l-gram"></i>Grammaire</span><span><i class="l-conv"></i>Oral</span></div>
+        </div>
+      </section>
+      ${total < D && d.skip ? `<div class="notice">Rappels coupés pour aujourd’hui. <button class="link" id="unskip">Les réactiver</button></div>` : ''}
+      ${total >= D ? `<div class="notice done">Plus de rappel aujourd’hui pour le ${L.langNameFr}. Tu peux continuer si tu en as envie${AI.hasKey() ? ` : il te reste environ ${budget - req} requêtes IA, soit près de ${convAffordable} min de conversation.` : '.'}</div>` : ''}
+      ${AI.hasKey() ? '' : `<div class="notice">La conversation avec l’IA n’est pas encore activée. <a class="link" href="#settings">Ajoute ta clé Gemini gratuite</a>, c’est l’affaire de deux minutes. En attendant, l’oral guidé fonctionne hors ligne.</div>`}
 
       <section class="section">
         <div class="section-head"><h2>${esc(T.session)}</h2><span class="muted small">${D} minutes</span></div>
         <div class="steps">
-          ${step('01', 'vocab', esc(T.stepWords), `${vocabCount} carte${vocabCount > 1 ? 's' : ''} à revoir ou découvrir. Réponds à voix haute.`, '#words', 'Réviser')}
-          ${step('02', 'gram', esc(step2.href === '#sounds' ? N.sounds : T.stepGrammar), step2.desc, step2.href, 'S’entraîner')}
-          ${step('03', 'conv', esc(T.stepSpeak), AI.hasKey() ? `Jeu de rôle avec ${esc(sugg[0].who)} : <b>${esc(sugg[0].title)}</b>.` : 'Oral guidé : tu réponds à voix haute à des questions.', AI.hasKey() ? '#speak/' + sugg[0].id : '#speak/oral', 'Parler')}
+          ${step('01', 'vocab', 'words', esc(T.stepWords), `${vocabCount} carte${vocabCount > 1 ? 's' : ''} à revoir ou découvrir. Réponds à voix haute.`, '#words', 'Réviser')}
+          ${step('02', 'gram', step2.href === '#sounds' ? 'sounds' : 'verbs', esc(step2.href === '#sounds' ? N.sounds : T.stepGrammar), step2.desc, step2.href, 'S’entraîner')}
+          ${step('03', 'conv', 'speak', esc(T.stepSpeak), AI.hasKey() ? `Jeu de rôle avec ${esc(sugg[0].who)} : <b>${esc(sugg[0].title)}</b>.` : 'Oral guidé : tu réponds à voix haute à des questions.', speakHref, 'Parler')}
         </div>
       </section>
 
@@ -346,6 +413,7 @@
     const setSkip = v => { Store.day().skip = v; Store.save(); Store.sync(true); if (Sync.enabled()) Sync.syncNow(); go(); };
     const sk = $('#skipToday'); if (sk) sk.onclick = () => setSkip(true);
     const us = $('#unskip'); if (us) us.onclick = () => setSkip(false);
+    countUp($('[data-count]'));
   };
 
   // =====================================================================

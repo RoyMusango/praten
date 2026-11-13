@@ -14,7 +14,7 @@
 <tr><td>wij / we</td><td>zijn</td><td>hebben</td></tr>
 <tr><td>jullie</td><td>zijn</td><td>hebben</td></tr>
 <tr><td>zij / ze (ils)</td><td>zijn</td><td>hebben</td></tr></table>
-<p>Âge et faim se disent comme en français avec <b>zijn</b> pour l’âge : <i>Ik <b>ben</b> 22 jaar</i> (j’<b>ai</b> 22 ans !). Mais <i>Ik <b>heb</b> honger</i> (j’ai faim).</p>`,
+<p>Piège : l’<b>âge</b> se dit avec <b>zijn</b>, pas avec avoir : <i>Ik <b>ben</b> 22 jaar</i> (j’<b>ai</b> 22 ans). La faim, elle, se dit comme en français : <i>Ik <b>heb</b> honger</i> (j’ai faim).</p>`,
     bank: [
       { q: 'Ik ___ student.', a: ['ben'], opts: ['ben', 'is', 'heb'] },
       { q: 'Hij ___ uit België.', a: ['is'], opts: ['ben', 'is', 'zijn'] },
@@ -149,7 +149,7 @@
     hint: 'Pluriel du nom',
     fiche: `
 <p>Deux terminaisons :</p>
-<ul><li><b>-en</b> (la plupart) : <i>de boek → de boek<b>en</b></i>, <i>de les → de less<b>en</b></i> (on double la consonne après voyelle courte), <i>de straat → de strat<b>en</b></i> (voyelle longue : on la simplifie).</li>
+<ul><li><b>-en</b> (la plupart) : <i>het boek → de boek<b>en</b></i>, <i>de les → de less<b>en</b></i> (on double la consonne après voyelle courte), <i>de straat → de strat<b>en</b></i> (voyelle longue : on la simplifie).</li>
 <li><b>-s</b> : mots en -el, -em, -en, -er, -je, et beaucoup de mots étrangers : <i>de tafel<b>s</b>, de broodje<b>s</b>, de computer<b>s</b>, de collega’<b>s</b></i>.</li></ul>
 <p>Irréguliers fréquents : <i>het kind → de kinder<b>en</b>, de stad → de steden</i>.</p>`,
     bank: [
@@ -257,8 +257,8 @@
     label: 'Mon, ton, son…', level: 'A1',
     fiche: `
 <table><tr><td>mijn</td><td>mon, ma, mes</td></tr><tr><td>jouw / je</td><td>ton, ta, tes</td></tr>
-<tr><td>uw</td><td>votre (politesse)</td></tr><tr><td>zijn</td><td>son (à lui)</td></tr><tr><td>haar</td><td>son (à elle)</td></tr>
-<tr><td>ons / onze</td><td>notre (ons + mot en het, onze sinon)</td></tr><tr><td>jullie</td><td>votre (à vous)</td></tr><tr><td>hun</td><td>leur</td></tr></table>
+<tr><td>uw</td><td>votre, vos (politesse)</td></tr><tr><td>zijn</td><td>son, sa, ses (à lui)</td></tr><tr><td>haar</td><td>son, sa, ses (à elle)</td></tr>
+<tr><td>ons / onze</td><td>notre, nos (ons + mot en het au singulier, onze sinon)</td></tr><tr><td>jullie</td><td>votre, vos (à vous tous)</td></tr><tr><td>hun</td><td>leur, leurs</td></tr></table>
 <p>Le néerlandais distingue <b>zijn</b> (à lui) et <b>haar</b> (à elle) : <i>Anna en <b>haar</b> broer</i>.</p>`,
     bank: [
       { q: 'Dit is ___ broer. (mon)', a: ['mijn'] },

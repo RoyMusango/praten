@@ -1,4 +1,4 @@
 /* Couleurs propres à l'app : Pays-Bas */
-:root { --accent: #e8590c; --accent-2: #21468b; --brand-mark: linear-gradient(180deg, #ae1c28 33%, #ffffff 33% 66%, #21468b 66%); }
+:root { --accent: #e8590c; --accent-2: #21468b; --brand-mark: linear-gradient(180deg, #ae1c28 33%, #ffffff 33% 66%, #21468b 66%); --hero: linear-gradient(125deg, #21468b 0%, #a5343c 60%, #e8590c 100%); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent: #ff8c42; --accent-2: #6d8fe0; } }
 :root[data-theme="dark"] { --accent: #ff8c42; --accent-2: #6d8fe0; }

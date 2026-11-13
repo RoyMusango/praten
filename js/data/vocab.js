@@ -99,7 +99,7 @@ zaterdag | samedi |
 zondag | dimanche |
 het uur | l’heure (om drie uur = à trois heures) |
 Hoe laat is het? | Quelle heure est-il ? | Hoe laat?
-half drie | deux heures et demie (!) | 14.30 uur
+half drie | deux heures et demie (pas trois !) | halfdrie
 kwart over vier | quatre heures et quart |
 de ochtend | le matin | de morgen
 de middag | l’après-midi |
@@ -111,13 +111,13 @@ ik | je |
 jij | tu | je
 u | vous (politesse) |
 hij | il |
-zij | elle, ils | ze
+zij | elle ; ils, elles | ze
 wij | nous | we
 jullie | vous (pluriel) |
 de man | l’homme, le mari |
 de vrouw | la femme |
 het kind | l’enfant | de kinderen (pluriel)
-de vriend | l’ami | de maat (BE)
+de vriend | l’ami, le petit ami | de kameraad; de maat (familier)
 de vriendin | l’amie, la petite amie |
 de familie | la famille |
 de vader | le père | papa
@@ -126,7 +126,7 @@ de broer | le frère |
 de zus | la sœur | de zuster
 de ouders | les parents |
 de collega | le collègue |
-de buur | le voisin | de buurman
+de buur | le voisin | de buurman; de buurvrouw (la voisine)
 ` },
     werkwoorden: { label: 'Verbes essentiels', prio: 1, words: `
 zijn | être |
@@ -135,10 +135,10 @@ gaan | aller |
 komen | venir |
 doen | faire |
 maken | faire, fabriquer |
-kunnen | pouvoir |
+kunnen | pouvoir (capacité), savoir faire |
 willen | vouloir |
 moeten | devoir |
-mogen | avoir le droit, pouvoir |
+mogen | avoir le droit de, pouvoir (permission) |
 weten | savoir |
 kennen | connaître |
 zien | voir |
@@ -184,7 +184,7 @@ warm | chaud |
 koud | froid |
 moe | fatigué |
 blij | content | content (BE)
-druk | occupé, animé |
+druk | occupé, chargé, animé |
 rustig | calme |
 snel | rapide |
 traag | lent | langzaam
@@ -222,8 +222,8 @@ de groenten | les légumes |
 het fruit | les fruits |
 de appel | la pomme |
 het ontbijt | le petit-déjeuner |
-de lunch | le déjeuner | het middageten
-het avondeten | le dîner |
+de lunch | le déjeuner (repas de midi) | het middageten
+het avondeten | le dîner, le souper (repas du soir) |
 de rekening | l’addition |
 Smakelijk! | Bon appétit ! | Eet smakelijk!
 Gezondheid! | Santé ! (et « à vos souhaits ») | Santé! (BE)
@@ -243,20 +243,20 @@ de bus | le bus |
 de fiets | le vélo |
 de auto | la voiture | de wagen (BE)
 het kaartje | le ticket | het ticket; het biljet
-enkel | aller simple |
-heen en terug | aller-retour | retour (BE)
+enkel | aller simple (billet) | enkele reis
+heen en terug | aller-retour | retour (Pays-Bas)
 links | à gauche |
 rechts | à droite |
 rechtdoor | tout droit |
 dichtbij | près |
 ver | loin |
 de halte | l’arrêt |
-het perron | le quai | het spoor
+het perron | le quai | het spoor (la voie)
 de winkel | le magasin |
 de apotheek | la pharmacie |
 de bank | la banque, le banc |
 het ziekenhuis | l’hôpital |
-de markt | le marché, la grand-place |
+de markt | le marché ; la grand-place |
 ` },
     huis: { label: 'Logement', prio: 2, words: `
 het huis | la maison |
@@ -290,11 +290,11 @@ het bedrijf | l’entreprise | de firma
 het geld | l’argent | de centen (BE, familier)
 de rekening | le compte (en banque), la facture |
 de lening | le prêt |
-de kunstmatige intelligentie | l’intelligence artificielle | AI; KI
+de kunstmatige intelligentie | l’intelligence artificielle | artificiële intelligentie (BE); AI
 de gegevens | les données | de data
 het programma | le programme |
 de ingenieur | l’ingénieur |
-blokken | réviser, bûcher (BE) | studeren
+blokken | bloquer, réviser pour les examens (BE) | studeren
 ` },
     weer: { label: 'Météo', prio: 3, words: `
 het weer | le temps (météo) |
@@ -315,7 +315,7 @@ het doelpunt | le but | de goal
 scoren | marquer |
 winnen | gagner |
 verliezen | perdre |
-gelijkspel | match nul |
+het gelijkspel | le match nul |
 de supporter | le supporter | de fan
 de hobby | le hobby |
 de film | le film |
