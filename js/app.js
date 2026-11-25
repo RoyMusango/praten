@@ -30,6 +30,8 @@
     bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
     target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
     flame: '<path d="M12 3c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8z"/>',
+    play: '<path d="M8 5.5v13l10.5-6.5z"/>',
+    ear: '<path d="M7 9a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-5.5 1.6"/><path d="M10 9.5a2 2 0 0 1 4 0"/>',
     // Rubriques
     today: '<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/>',
     speak: '<path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12z"/>',
@@ -185,6 +187,10 @@
   }
   window.addEventListener('tts-missing', e => toast(esc(e.detail) + ' <a href="#settings" class="link">Réglages voix</a>', 9000));
 
+  // ---------- Sons et réactions aux réponses ----------
+  const feel = (ok, root) => { Sfx.play(ok ? 'ok' : 'bad'); Media.react(root && ($('.answer-row', root) || $('.opts', root) || root), ok); };
+  const endSfx = (sc, n) => Sfx.play(sc / Math.max(1, n) >= 0.7 ? 'done' : 'soft');
+
   // ---------- Effets (ordinateur uniquement) ----------
   function countUp(el) {
     const to = el ? +el.dataset.count : 0;
@@ -206,8 +212,10 @@
   // Anciennes adresses de l'app d'espagnol, toujours acceptées
   const ALIASES = { hoy: 'today', hablar: 'speak', palabras: 'words', verbos: 'verbs', gramatica: 'grammar', leer: 'read', progreso: 'progress', ajustes: 'settings' };
   const currentRoute = () => { const n = (location.hash.slice(1) || 'today').split('/')[0]; return ALIASES[n] || n; };
+  let activeLesson = null;
   function go() {
     if (currentListener) currentListener.stop();
+    if (activeLesson) { activeLesson.stop(); activeLesson = null; }
     Speech.stopSpeaking();
     document.onkeydown = null;
     document.body.classList.remove('in-chat');
@@ -320,7 +328,7 @@
     let step2;
     if (SOUNDS_ON && L.soundsFirst && (pron.n < 30 || pron.score < 0.75)) step2 = { href: '#sounds', desc: `Écoute une voix native et répète : les sons de base du ${L.langNameFr}.` };
     else if (wt.s < Store.topic(weakT[0]).score) step2 = { href: '#verbs', desc: `Verbes ciblés : <b>${esc(Conj.NAMES[wt.t])}</b>${trouble.length ? `, avec tes verbes difficiles (${trouble.map(esc).join(', ')})` : ''}.` };
-    else step2 = { href: '#grammar/' + weakT[0], desc: `Point faible du moment : <b>${esc(topicLabel(weakT[0]))}</b>.` };
+    else step2 = { href: '#grammar/' + weakT[0], desc: `Point faible du moment : <b>${esc(topicLabel(weakT[0]))}</b>.${lessonSeen(weakT[0]) ? '' : ' Commence par la leçon animée.'}` };
 
     const step = (n, key, ico, title, desc, href, btn) => {
       const done = d.min[key], target = t[key], p = Math.min(100, done / target * 100);
@@ -631,12 +639,13 @@
     return [...due.slice(0, 50), ...mixed.slice(0, newLeft)];
   }
 
-  const vocabTabs = active => `<div class="tabs">${[['', T.review], ['synonyms', T.synonyms], ['themes', T.themes]].map(([k, lbl]) => `<a class="${k === active ? 'active' : ''}" href="#words${k ? '/' + k : ''}">${esc(lbl)}</a>`).join('')}</div>`;
+  const vocabTabs = active => `<div class="tabs">${[['', T.review], ['synonyms', T.synonyms], ['games', T.games || 'Jeux'], ['themes', T.themes]].map(([k, lbl]) => `<a class="${k === active ? 'active' : ''}" href="#words${k ? '/' + k : ''}">${esc(lbl)}</a>`).join('')}</div>`;
 
-  routes.words = (tab) => {
+  routes.words = (tab, sub) => {
     area = 'vocab';
     if (tab === 'themes' || tab === 'temas') return vocabThemes();
     if (tab === 'synonyms' || tab === 'sinonimos') return synonymTrainer();
+    if (tab === 'games') return vocabGames(sub);
     let queue = buildVocabQueue();
     const total = queue.length;
     const retry = new Set(), firstTry = {};
@@ -650,6 +659,7 @@
       if (currentListener) currentListener.stop();
       cur = queue.shift(); answered = false;
       if (!cur) {
+        if (total) Sfx.play('done');
         box.innerHTML = `<div class="done-box"><span class="eyebrow">Terminé</span><h2>Révisions du jour bouclées</h2><p class="muted" style="margin-top:12px">Tu peux entraîner les <a class="link" href="#words/synonyms">synonymes</a>, activer d’autres <a class="link" href="#words/themes">thèmes</a> ou passer aux <a class="link" href="#verbs">verbes</a>.</p></div>`;
         return;
       }
@@ -690,6 +700,7 @@
       }
       if (!ok && !retry.has(cur.id)) { retry.add(cur.id); queue.push(cur); }
       const label = { ok: 'Correct', accents: 'Correct, attention aux accents', typo: 'Presque : petite faute de frappe', wrong: skip ? 'La réponse' : 'Pas tout à fait' }[res];
+      feel(ok, box);
       $('#vRes').innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${label}</span>
         <div class="solution">${esc(cur.tl)} ${sayBtn(speakable(cur.tl))}</div>
         ${rev ? `<div class="syn">${esc(cur.fr)}</div>` : ''}
@@ -711,6 +722,97 @@
     next();
   };
 
+
+  // Jeux : paires (mot ↔ sens) et dictée de mots, avec les mots déjà vus en priorité
+  function vocabGames(mode = 'pairs') {
+    const themes = activeThemes();
+    const short = w => !/\.\.\.|…|\?/.test(w.tl) && w.tl.split(/\s+/).length <= 3 && w.fr.length <= 34;
+    const seen = allWords().filter(w => short(w) && Store.card(w.id) && Store.card(w.id).box > 0);
+    const fresh = allWords().filter(w => short(w) && themes.includes(w.theme) && !seen.includes(w));
+    const pool = n => shuffle([...shuffle(seen).slice(0, n), ...shuffle(fresh)]).filter((w, i, a) => a.findIndex(x => x.tl === w.tl || x.fr === w.fr) === i).slice(0, n);
+    view.innerHTML = head('Vocabulaire', esc(N.words), 'Deux jeux courts pour ancrer les mots par l’oreille et par le sens. Les mots que tu as déjà vus passent en premier.') + vocabTabs('games') + `
+      <div class="chips" style="justify-content:center"><a class="chip ${mode === 'pairs' ? 'on' : ''}" href="#words/games/pairs" style="text-decoration:none">Paires</a><a class="chip ${mode === 'dictee' ? 'on' : ''}" href="#words/games/dictee" style="text-decoration:none">Dictée</a></div>
+      <div id="game"></div>`;
+    const box = $('#game');
+    if (mode === 'dictee') return dictation(box, pool(8));
+    pairsGame(box, pool(6));
+  }
+
+  function pairsGame(box, words) {
+    if (words.length < 3) { box.innerHTML = `<p class="muted" style="text-align:center">Active quelques <a class="link" href="#words/themes">thèmes</a> pour jouer.</p>`; return; }
+    const t0 = Date.now();
+    let sel = null, found = 0, misses = 0;
+    box.innerHTML = `<div class="pairs-meta"><span>Associe chaque mot à son sens</span><span>Paires : <b id="pFound">0</b> / ${words.length}</span><span>Erreurs : <b id="pMiss">0</b></span></div>
+      <div class="pairs"><div class="col">${shuffle(words).map(w => `<button class="pcard" data-side="tl" data-id="${esc(w.id)}">${esc(w.tl)}</button>`).join('')}</div>
+      <div class="col">${shuffle(words).map(w => `<button class="pcard" data-side="fr" data-id="${esc(w.id)}">${esc(w.fr)}</button>`).join('')}</div></div><div id="pEnd"></div>`;
+    box.querySelector('.pairs').onclick = e => {
+      const b = e.target.closest('.pcard'); if (!b || b.classList.contains('ok')) return;
+      if (b.dataset.side === 'tl') Speech.speak(speakable(words.find(w => w.id === b.dataset.id).tl));
+      if (!sel || sel.dataset.side === b.dataset.side) { if (sel) sel.classList.remove('sel'); sel = b; b.classList.add('sel'); Sfx.play('tap'); return; }
+      const a = sel; sel = null; a.classList.remove('sel');
+      if (a.dataset.id === b.dataset.id) {
+        a.classList.add('ok'); b.classList.add('ok'); found++; Sfx.play('pop');
+        $('#pFound').textContent = found;
+        Store.recordTopic('vocabulario', true, 0.02);
+        if (found === words.length) {
+          const sec = Math.round((Date.now() - t0) / 1000);
+          Sfx.play('done'); Store.day().exercises++; Store.save();
+          $('#pEnd').innerHTML = `<div class="done-box trainer"><span class="eyebrow">Bravo</span><div class="score">${sec}<span class="muted" style="font-size:1.4rem"> s</span></div><p class="muted" style="margin-top:14px">${misses ? `${misses} erreur${misses > 1 ? 's' : ''} en route. ` : 'Sans une seule erreur. '}Dis chaque mot à voix haute avec son sens avant de rejouer.</p>
+            <div class="feedback" style="max-width:520px;margin:18px auto 0">${words.map(w => `<div class="syn"><b>${esc(w.tl)}</b> ${sayBtn(speakable(w.tl))} ${esc(w.fr)}</div>`).join('')}</div>
+            <div class="row"><button class="btn" id="pAgain">Nouvelle partie</button></div></div>`;
+          $('#pAgain').onclick = () => vocabGames('pairs');
+        }
+      } else {
+        misses++; $('#pMiss').textContent = misses; Sfx.play('bad');
+        [a, b].forEach(x => { x.classList.add('no'); Media.react(x, false); setTimeout(() => x.classList.remove('no'), 600); });
+      }
+    };
+  }
+
+  function dictation(box, words) {
+    let i = 0, score = 0, answered = false;
+    function show() {
+      if (currentListener) currentListener.stop();
+      answered = false;
+      if (i >= words.length) {
+        endSfx(score, words.length); Store.day().exercises++; Store.save();
+        box.innerHTML = `<div class="done-box trainer"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${words.length}</span></div><p class="muted" style="margin-top:14px">${scoreMsg(score, words.length, 'L’orthographe vient avec l’oreille : réécoute chaque mot en lisant la solution.')}</p><div class="row"><button class="btn" id="dAgain">Nouvelle dictée</button></div></div>`;
+        $('#dAgain').onclick = () => vocabGames('dictee');
+        return;
+      }
+      const w = words[i];
+      box.innerHTML = `<div class="trainer"><div class="meta"><span>Dictée</span><div class="meter"><i style="width:${i / words.length * 100}%"></i></div><span>${i + 1} / ${words.length}</span></div>
+        <button class="listen-big" id="dListen" title="Réécouter" aria-label="Réécouter le mot">${icon('sound')}</button>
+        <div class="prompt-sub">Écoute et écris le mot ou l’expression en ${esc(L.langNameFr)}, avec ses accents.</div>
+        <div class="answer-row"><input id="dIn" autocomplete="off" placeholder="Ce que tu entends"><button class="btn" id="dCheck">Vérifier</button></div>
+        <div class="row"><button class="btn quiet small" id="dSlow">Plus lentement</button><button class="link small" id="dSkip">Je ne sais pas</button></div><div id="dRes"></div></div>`;
+      const inp = $('#dIn'); inp.focus();
+      $('#dListen').onclick = () => Speech.speak(speakable(w.tl));
+      $('#dSlow').onclick = () => Speech.speak(speakable(w.tl), { rate: 0.6 });
+      $('#dSkip').onclick = () => { inp.value = ''; check(); };
+      $('#dCheck').onclick = () => check();
+      inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); answered ? (i++, show()) : check(); } };
+      Speech.speak(speakable(w.tl));
+    }
+    function check() {
+      if (answered) return;
+      answered = true;
+      const w = words[i], res = compare($('#dIn').value, [w.tl], { loose: true }), ok = res !== 'wrong';
+      if (ok) score++;
+      feel(ok, box);
+      Store.recordTopic('vocabulario', ok, 0.02);
+      const label = { ok: 'Correct', accents: 'Correct, attention aux accents', typo: 'Presque : petite faute de frappe', wrong: 'Réponse' }[res];
+      $('#dRes').innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${label}</span>
+        <div class="solution">${esc(w.tl)} ${sayBtn(speakable(w.tl))}</div><div class="syn">${esc(w.fr)}</div>
+        ${ok ? '' : '<p class="muted small" style="margin-top:10px">Réécoute en lisant la solution, puis répète-la à voix haute.</p>'}
+        <div class="row"><button class="btn" id="dNext">Suivant ${icon('arrow')}</button></div></div>`;
+      if (!ok) Speech.speak(speakable(w.tl));
+      $('#dNext').onclick = () => { i++; show(); };
+      $('#dNext').focus();
+    }
+    show();
+  }
+
   // Synonymes : enrichir son expression
   function synonymTrainer() {
     const themes = activeThemes();
@@ -724,6 +826,7 @@
       if (currentListener) currentListener.stop();
       answered = false;
       if (i >= items.length) {
+        endSfx(score, items.length);
         box.innerHTML = `<div class="done-box"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div><p class="muted" style="margin-top:14px">${scoreMsg(score, items.length, 'Normal au début : les synonymes reviennent à chaque série. Répète-les à voix haute.')}</p><div class="row"><button class="btn" id="again">Nouvelle série</button></div></div>`;
         $('#again').onclick = () => synonymTrainer();
         return;
@@ -747,6 +850,7 @@
       const same = compare(val, [w.tl]) !== 'wrong';
       const ok = !same && compare(val, w.syn, { loose: true }) !== 'wrong';
       if (ok) score++;
+      feel(ok, box);
       Store.recordTopic('vocabulario', ok, 0.03);
       $('#sRes').innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${ok ? 'Bien vu' : same ? 'C’est le même mot' : 'Les équivalents'}</span>
         <div class="syn" style="font-size:1.15rem;margin-top:10px">${w.syn.map(s => `<b>${esc(s)}</b> ${sayBtn(speakable(s))}`).join(' &nbsp; ')}</div>
@@ -821,7 +925,7 @@
       answered = false;
       const box = $('#vt');
       if (i >= items.length) {
-        Store.day().exercises++; Store.save();
+        Store.day().exercises++; Store.save(); endSfx(score, items.length);
         box.innerHTML = `<div class="done-box trainer"><span class="eyebrow">Série terminée</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div><p class="muted" style="margin-top:14px">${scoreMsg(score, items.length, 'Ouvre l’aide sous chaque question et relis le tableau de conjugaison avant de recommencer.')}</p><div class="row"><button class="btn" id="again">Nouvelle série</button></div></div>`;
         $('#again').onclick = start; side();
         return;
@@ -853,6 +957,7 @@
       const res = compare(val, it.a, { pronoun: true });
       const ok = res !== 'wrong';
       if (ok) { score++; run++; } else run = 0;
+      if (ok && run >= 5 && run % 5 === 0) Sfx.play('streak'); else feel(ok, $('#vt'));
       Store.recordConj(it.tense, it.verb, ok);
       if (Conj.TOPIC[it.tense]) Store.recordTopic(Conj.TOPIC[it.tense], ok, 0.08);
       const wrongT = !ok && Conj.wrongTense ? Conj.wrongTense(it, v => compare(val, [v], { pronoun: true }) !== 'wrong') : null;
@@ -876,7 +981,7 @@
   // =====================================================================
   // SOUNDS : écouter et répéter (prononciation)
   // =====================================================================
-  routes.sounds = (groupId) => {
+  routes.sounds = (groupId, mode) => {
     if (!SOUNDS_ON) return go();
     area = 'gram';
     const group = SOUNDS.find(g => g.id === groupId);
@@ -891,10 +996,12 @@
     }
     let words = shuffle(group.words), i = 0;
     view.innerHTML = backLink('#sounds', N.sounds) + head('Prononciation', esc(group.label), esc(group.fr)) + `
+      <div class="tabs"><a class="${mode === 'ear' ? '' : 'active'}" href="#sounds/${group.id}">Répéter</a><a class="${mode === 'ear' ? 'active' : ''}" href="#sounds/${group.id}/ear">Reconnaître à l’oreille</a></div>
       ${group.tip ? `<div class="notice">${esc(group.tip)}</div>` : ''}
       <div class="trainer" id="snd"></div>`;
     const box = $('#snd');
     const st = () => { Store.state.sounds = Store.state.sounds || {}; return Store.state.sounds[group.id] || (Store.state.sounds[group.id] = { n: 0, ok: 0 }); };
+    if (mode === 'ear') return earTrainer(group, box, st);
     function show() {
       if (currentListener) currentListener.stop();
       const w = words[i % words.length];
@@ -914,6 +1021,7 @@
       const res = compare(heard, [w.w], { loose: true });
       const ok = res !== 'wrong';
       const s = st(); s.n++; if (ok) s.ok++;
+      Sfx.play(ok ? 'ok' : 'bad');
       Store.recordTopic('pronunciacion', ok, 0.05);
       $('#pRes').innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${ok ? 'Bien prononcé' : 'Pas encore reconnu'}</span>
         <p class="small">${ok ? 'Le micro a reconnu le mot.' : `Le micro a compris « ${esc(heard || '…')} ». Réécoute en 0.6×, exagère le son, puis réessaie.`}</p>
@@ -923,6 +1031,54 @@
     }
     show();
   };
+
+
+  // Écoute fine : on entend un mot, on le retrouve parmi des mots proches (paires minimales)
+  function earTrainer(group, box, st) {
+    const N_Q = 10;
+    const uniq = [...new Map(group.words.map(w => [w.w, w])).values()];
+    if (uniq.length < 3) { box.innerHTML = '<p class="muted">Pas assez de mots dans ce groupe.</p>'; return; }
+    let i = 0, score = 0, answered = false;
+    const near = w => uniq.filter(x => x.w !== w.w).map(x => ({ x, d: lev(stripAccents(x.w.toLowerCase()), stripAccents(w.w.toLowerCase())) + Math.random() * 0.8 })).sort((a, b) => a.d - b.d).slice(0, 3).map(o => o.x);
+    const list = Array.from({ length: N_Q }, () => pick(uniq));
+    function show() {
+      answered = false;
+      if (i >= N_Q) {
+        endSfx(score, N_Q); Store.save();
+        box.innerHTML = `<div class="done-box"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${N_Q}</span></div><p class="muted" style="margin-top:14px">${score >= 8 ? 'Ton oreille distingue bien ces sons. Passe à « Répéter » pour les produire.' : 'Réécoute les paires proches en 0.6× : l’oreille s’entraîne comme un muscle.'}</p><div class="row"><button class="btn" id="eAgain">Nouvelle série</button></div></div>`;
+        $('#eAgain').onclick = () => { i = 0; score = 0; list.splice(0, N_Q, ...Array.from({ length: N_Q }, () => pick(uniq))); show(); };
+        return;
+      }
+      const w = list[i], opts = shuffle([w, ...near(w)]);
+      box.innerHTML = `<div class="meta"><span>Quel mot entends-tu ?</span><div class="meter"><i style="width:${i / N_Q * 100}%"></i></div><span>${i + 1} / ${N_Q}</span></div>
+        <button class="listen-big" id="eListen" title="Réécouter" aria-label="Réécouter">${icon('sound')}</button>
+        <div class="prompt-sub">Écoute, puis touche le mot que la voix a prononcé.</div>
+        <div class="opts">${opts.map(o => `<button class="btn quiet" data-w="${esc(o.w)}">${esc(o.w)}</button>`).join('')}</div>
+        <div class="row"><button class="btn quiet small" id="eSlow">Réécouter en 0.6×</button></div><div id="eRes"></div>`;
+      $('#eListen').onclick = () => Speech.speak(w.w);
+      $('#eSlow').onclick = () => Speech.speak(w.w, { rate: 0.6 });
+      $$('[data-w]', box).forEach(b => b.onclick = () => {
+        if (answered) return; answered = true;
+        const ok = b.dataset.w === w.w;
+        if (ok) score++;
+        b.classList.add(ok ? 'good' : 'bad');
+        if (!ok) $$('[data-w]', box).forEach(x => { if (x.dataset.w === w.w) x.classList.add('good'); });
+        feel(ok, box);
+        const s = st(); s.ear = s.ear || { n: 0, ok: 0 }; s.ear.n++; if (ok) s.ear.ok++;
+        const other = !ok && uniq.find(x => x.w === b.dataset.w);
+        $('#eRes').innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${ok ? 'Bien entendu' : 'Réponse'}</span>
+          <div class="solution">${esc(w.w)} ${sayBtn(w.w)}</div>${w.fr ? `<div class="syn">${esc(w.fr)}</div>` : ''}
+          ${other ? `<p class="small" style="margin-top:8px">Tu as choisi <b>${esc(other.w)}</b>${other.fr ? ` (${esc(other.fr)})` : ''}. Écoute les deux à la suite : <button class="link" id="eBoth">comparer</button></p>` : ''}
+          <div class="row"><button class="btn" id="eNext">Suivant ${icon('arrow')}</button></div></div>`;
+        const both = $('#eBoth');
+        if (both) both.onclick = () => Speech.speak(w.w, { onend: () => setTimeout(() => Speech.speak(other.w), 350) });
+        $('#eNext').onclick = () => { i++; show(); };
+        $('#eNext').focus();
+      });
+      Speech.speak(w.w);
+    }
+    show();
+  }
 
   // =====================================================================
   // GRAMMAR : fiches + exercices
@@ -935,26 +1091,67 @@
     while (items.length < n) items.push(Conj.genItem(t.gen, { pick }));
     return shuffle(items);
   }
+  // Variété : quelques questions deviennent « remets dans l'ordre » ou « dictée » (phrase entendue, mot manquant à écrire)
+  const cleanQ = q => q.replace(/\s*\([^)]*\)/g, '').replace(/\s+([.,!?;:])/g, '$1').replace(/\s+/g, ' ').trim();
+  function varyExercises(items) {
+    const ok = it => it.q.includes('___') && !it.q.includes('\n') && !/→/.test(it.q) && !it.noSay && !it.kind;
+    const fullOf = (it, a) => cleanQ(it.q.replace('___', a));
+    const len = it => fullOf(it, it.a[0]).split(' ').length;
+    const orderable = shuffle(items.filter(it => ok(it) && !/\//.test(it.a[0]) && len(it) >= 4 && len(it) <= 10)).slice(0, 2);
+    const listenable = shuffle(items.filter(it => ok(it) && !it.opts && !orderable.includes(it))).slice(0, 1);
+    return items.map(it => {
+      if (orderable.includes(it)) return { ...it, kind: 'order', a: it.a.map(a => fullOf(it, a)), words: shuffle(fullOf(it, it.a[0]).split(' ')), opts: null };
+      if (listenable.includes(it)) return { ...it, kind: 'listen' };
+      return it;
+    });
+  }
 
   routes.grammar = (id, arg) => {
     area = 'gram';
     if (id === 'conjugator' || id === 'conjugador') return conjugatorView(arg && decodeURIComponent(arg));
     if (id && GRAMMAR.TOPICS[id]) return topicView(id);
-    view.innerHTML = head('Grammaire', esc(N.grammar), 'Chaque barre reflète ta maîtrise estimée, mesurée sur tes exercices et sur les erreurs relevées en conversation. Les points les plus faibles remontent dans ta séance du jour.') + `
+    view.innerHTML = head('Grammaire', esc(N.grammar), 'Chaque point commence par une leçon animée de deux minutes, lue par une voix native. Les barres reflètent ta maîtrise estimée (exercices et erreurs relevées en conversation) ; les points les plus faibles remontent dans ta séance du jour.') + `
       <div class="tabs"><a class="active" href="#grammar">Points de grammaire</a><a href="#grammar/conjugator">${esc(T.conjugator)}</a></div>
       <div class="topic-grid">${GRAMMAR.ORDER.map(id => {
       const t = Store.topic(id), p = pct(t.score);
-      return `<a class="topic" href="#grammar/${id}"><div><span class="tag">${GRAMMAR.TOPICS[id].level}</span>${Store.state.weakSelf.includes(id) ? '<span class="tag weak">Point faible</span>' : ''}</div><h3>${esc(GRAMMAR.TOPICS[id].label)}</h3>
+      return `<a class="topic" href="#grammar/${id}"><div><span class="tag">${GRAMMAR.TOPICS[id].level}</span>${Store.state.weakSelf.includes(id) ? '<span class="tag weak">Point faible</span>' : ''}<span class="tag lesson ${lessonSeen(id) ? 'seen' : ''}">${lessonSeen(id) ? 'Leçon vue' : 'Leçon animée'}</span></div><h3>${esc(GRAMMAR.TOPICS[id].label)}</h3>
           <div class="meter ${t.n ? meterCls(p) : ''}"><i style="width:${t.n ? p : 0}%"></i></div><span class="stat">${t.n ? `${p} % · ${t.n} réponses` : 'Pas encore évalué'}</span></a>`;
     }).join('')}</div>
       ${L.grammarLinks ? `<p class="muted small" style="margin-top:28px">${L.grammarLinks}</p>` : ''}`;
   };
 
+  const lessonSeen = id => Store.state.lessons && Store.state.lessons[id];
+  function lessonFor(id) {
+    const t = GRAMMAR.TOPICS[id], own = typeof LESSONS !== 'undefined' && LESSONS[id];
+    return own ? { title: t.label, ...own } : Media.autoLesson(t);
+  }
+  function lessonCta(id) {
+    const ls = lessonFor(id), min = Math.max(1, Math.round(ls.scenes.length * 22 / 60)), seen = lessonSeen(id);
+    return `<div class="lesson-cta"><button class="play-big" id="lPlay" aria-label="Lancer la leçon animée"><svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.2-6.5a1 1 0 0 0 0-1.7L9.5 4.6A1 1 0 0 0 8 5.5z"/></svg></button>
+      <div><span class="eyebrow">Leçon animée · environ ${min} min${seen ? ' · déjà vue' : ''}</span><h3>${esc(ls.scenes[0].h || GRAMMAR.TOPICS[id].label)}</h3>
+      <p>Regarde et écoute : chaque exemple est lu par une voix native, et quelques questions t’attendent en route.</p></div></div>`;
+  }
+  function startLesson(id, box) {
+    const ls = lessonFor(id), t = GRAMMAR.TOPICS[id];
+    const yt = ls.yt || `${t.label} ${L.langNameFr}`;
+    activeLesson = Media.LessonPlayer(box, ls, {
+      icon,
+      onQuiz: ok => { Store.recordTopic(id, ok, 0.08); lastActivity = Date.now(); },
+      onDone: r => { Store.state.lessons = Store.state.lessons || {}; Store.state.lessons[id] = { date: Store.today(), ok: r.ok, n: r.n }; Store.save(); },
+      endButtons: `<button class="btn" data-goex>Passer aux exercices ${icon('arrow')}</button><a class="btn quiet" href="https://www.youtube.com/results?search_query=${encodeURIComponent(yt)}" target="_blank" rel="noopener">Vidéos sur ce point</a>`,
+    });
+    box.addEventListener('click', e => { if (e.target.closest('[data-goex]')) { const ex = $('#ex'); if (ex) { ex.scrollIntoView({ behavior: 'smooth', block: 'start' }); const f = $('input, button.btn', ex); if (f) f.focus({ preventScroll: true }); } } });
+    // Une leçon regardée compte comme du temps de grammaire
+    const keep = setInterval(() => { if (!box.isConnected) return clearInterval(keep); if (!box.querySelector('.lesson.paused')) lastActivity = Date.now(); }, 20000);
+  }
+
   function topicView(id) {
     const t = GRAMMAR.TOPICS[id];
     view.innerHTML = backLink('#grammar', N.grammar) + head(`Grammaire · ${t.level}`, esc(t.label)) + `
+      <div id="lessonBox">${lessonCta(id)}</div>
       <div class="two-col"><div class="panel fiche">${t.fiche}</div><div class="panel" id="ex"></div></div>
       ${t.speak ? `<section class="section"><div class="section-head"><h2>${esc(T.speakAloud)}</h2><span class="muted small">Une minute à voix haute pour chaque question</span></div>${t.speak.map(q => `<p style="font-size:1.1rem">${esc(q)} ${sayBtn(q)}</p>`).join('')}</section>` : ''}`;
+    $('#lPlay').onclick = () => startLesson(id, $('#lessonBox'));
     runExercises(id, $('#ex'));
   }
 
@@ -965,28 +1162,55 @@
   }
 
   function runExercises(id, box) {
-    let items = buildExercises(id), i = 0, score = 0, answered = false;
+    let items = varyExercises(buildExercises(id)), i = 0, score = 0, answered = false;
     function show() {
       if (currentListener) currentListener.stop();
       answered = false;
       if (i >= items.length) {
-        Store.day().exercises++; Store.save();
+        Store.day().exercises++; Store.save(); endSfx(score, items.length);
         const s = SCENARIOS.filter(x => x.targets.includes(id));
         box.innerHTML = `<div class="done-box trainer"><span class="eyebrow">Résultat</span><div class="score">${score}<span class="muted" style="font-size:1.4rem"> / ${items.length}</span></div>
           <p class="muted" style="margin-top:14px">${scoreMsg(score, items.length, 'Relis la fiche à gauche, puis recommence une série.')}</p>
           <div class="row"><button class="btn" id="again">Nouvelle série</button>${s.length ? `<a class="btn ghost" href="#speak/${pick(s).id}">Pratiquer à l’oral</a>` : ''}</div></div>`;
-        $('#again', box).onclick = () => { items = buildExercises(id); i = 0; score = 0; show(); };
+        $('#again', box).onclick = () => { items = varyExercises(buildExercises(id)); i = 0; score = 0; show(); };
         return;
       }
       const it = items[i];
       // Jamais de trou sans consigne : à défaut d'indication propre, celle du point de grammaire
       const hint = it.hint || (!it.opts && GRAMMAR.TOPICS[id].hint);
-      box.innerHTML = `<div class="trainer"><div class="meta"><span>Exercice</span><div class="meter"><i style="width:${i / items.length * 100}%"></i></div><span>${i + 1} / ${items.length}</span></div>
+      const meta = `<div class="meta"><span>${{ order: 'Remets dans l’ordre', listen: 'Dictée' }[it.kind] || 'Exercice'}</span><div class="meter"><i style="width:${i / items.length * 100}%"></i></div><span>${i + 1} / ${items.length}</span></div>`;
+      document.onkeydown = null;
+      if (it.kind === 'order') {
+        box.innerHTML = `<div class="trainer">${meta}
+          <div class="prompt-sub" style="margin-bottom:14px">Touche les mots dans le bon ordre pour reconstruire la phrase${hint ? ` <span class="muted">(${esc(hint)})</span>` : ''}.</div>
+          <div class="build-line" id="bLine" data-empty="Ta phrase apparaît ici"></div>
+          <div class="build-pool" id="bPool">${it.words.map((w, k) => `<button class="wtile" data-k="${k}">${esc(w)}</button>`).join('')}</div>
+          <div class="row"><button class="btn quiet" id="bClear">Effacer</button><button class="btn" id="gCheck">Vérifier</button></div>
+          <div id="gRes"></div></div>`;
+        const line = $('#bLine', box), picked = [];
+        const paint = () => { line.innerHTML = picked.map((k, j) => `<button class="wtile" data-j="${j}">${esc(it.words[k])}</button>`).join(''); $$('#bPool .wtile', box).forEach(b => b.classList.toggle('used', picked.includes(+b.dataset.k))); };
+        $('#bPool', box).onclick = e => { const b = e.target.closest('[data-k]'); if (!b || answered) return; picked.push(+b.dataset.k); Sfx.play('tap'); paint(); if (picked.length === it.words.length) $('#gCheck', box).focus(); };
+        line.onclick = e => { const b = e.target.closest('[data-j]'); if (!b || answered) return; picked.splice(+b.dataset.j, 1); paint(); };
+        $('#bClear', box).onclick = () => { if (!answered) { picked.length = 0; paint(); } };
+        const value = () => picked.map(k => it.words[k]).join(' ');
+        $('#gCheck', box).onclick = () => check(value());
+        document.onkeydown = e => { if (e.key === 'Enter' && !answered && !e.target.closest('button, input, textarea') && box.isConnected) { e.preventDefault(); check(value()); } };
+        return;
+      }
+      const listen = it.kind === 'listen', full0 = cleanQ(it.q.replace('___', it.a[0]));
+      box.innerHTML = `<div class="trainer">${meta}
+        ${listen ? `<button class="listen-big" id="gListen" title="Réécouter" aria-label="Réécouter la phrase">${icon('sound')}</button>` : ''}
         <div class="prompt" style="font-size:1.5rem">${esc(it.q).replace('___', '<span class="blank">___</span>')}</div>
-        <div class="prompt-sub">${hint ? esc(hint) : '&nbsp;'}</div>
+        <div class="prompt-sub">${listen ? `Écoute la phrase et écris le mot qui manque${hint ? ` <span class="muted">(${esc(hint)})</span>` : ''}.` : hint ? esc(hint) : '&nbsp;'}</div>
         ${it.opts ? `<div class="opts">${shuffle(it.opts).map(o => `<button class="btn quiet" data-opt="${esc(o)}">${esc(o)}</button>`).join('')}</div>` : `
         <div class="answer-row"><button class="mic" id="gMic"></button><input id="gIn" autocomplete="off" placeholder="Ta réponse"><button class="btn" id="gCheck">Vérifier</button></div>`}
+        ${listen ? `<div class="row"><button class="btn quiet small" id="gSlow">Réécouter plus lentement</button></div>` : ''}
         <div id="gRes"></div></div>`;
+      if (listen) {
+        $('#gListen', box).onclick = () => Speech.speak(full0);
+        $('#gSlow', box).onclick = () => Speech.speak(full0, { rate: 0.7 });
+        Speech.speak(full0);
+      }
       if (it.opts) $$('[data-opt]', box).forEach(b => b.onclick = () => check(b.dataset.opt, b));
       else {
         const inp = $('#gIn', box); inp.focus();
@@ -1002,16 +1226,18 @@
       const res = compare(val, it.a, { pronoun: !!it.verb });
       const ok = res !== 'wrong';
       if (ok) score++;
+      feel(ok, box);
       Store.recordTopic(id, ok);
       if (it.verb) Store.recordConj(it.tense, it.verb, ok);
       if (btn) btn.classList.add(ok ? 'good' : 'bad');
       const shown = ok && res === 'ok' ? norm(val) === norm(it.a[0]) ? it.a[0] : val.trim() : it.a[0];
       // Phrase complète : la question remplie, ou la réponse seule pour une question à choix sans trou
-      const full = !it.q.includes('___') ? shown : it.q.includes('\n') ? it.q.split('\n').pop().replace('___', shown) : it.q.replace('___', shown);
+      const full = it.kind === 'order' ? (ok && it.a.find(x => compare(val, [x], { pronoun: !!it.verb }) !== 'wrong')) || it.a[0] : !it.q.includes('___') ? shown : it.q.includes('\n') ? it.q.split('\n').pop().replace('___', shown) : it.q.replace('___', shown);
       const table = it.verb && Conj.itemTable ? Conj.itemTable(it) : null;
       $('#gRes', box).innerHTML = `<div class="feedback"><span class="verdict ${ok ? 'good' : 'bad'}">${icon(ok ? 'check' : 'x')} ${ok ? (res === 'accents' ? 'Correct, attention aux accents' : 'Correct') : 'Réponse'}</span>
         <div class="solution" style="font-size:1.2rem">${esc(full)} ${it.noSay || /→/.test(it.q) ? '' : sayBtn(full)}</div>
-        ${it.a.length > 1 ? `<p class="small muted">Aussi accepté : ${it.a.filter(x => x !== shown).map(esc).join(', ')}</p>` : ''}
+        ${it.kind === 'order' && !ok && val ? `<p class="small muted">Ta phrase : ${esc(val)}</p>` : ''}
+        ${it.a.length > 1 ? `<p class="small muted">Aussi accepté : ${it.a.filter(x => x !== (it.kind === 'order' ? full : shown)).map(esc).join(', ')}</p>` : ''}
         ${it.expl ? `<p class="small">${esc(it.expl)}</p>` : ''}
         ${table ? `<details ${ok ? '' : 'open'}><summary class="small">${esc(table.title)}</summary><table>${table.rows.map(r => `<tr class="${r[2] ? 'hl' : ''}"><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></details>` : ''}
         ${ok ? '' : '<p class="muted small" style="margin-top:10px">Répète la phrase complète à voix haute avant de continuer.</p>'}
@@ -1245,6 +1471,7 @@
         <label class="field" style="margin-top:14px"><span>Vitesse : <b id="rateV">${s.ttsRate}</b></span><input id="rate" type="range" min="0.5" max="2" step="0.05" value="${s.ttsRate}"></label>
         <label class="check"><input type="checkbox" id="autoSpeak" ${s.autoSpeak ? 'checked' : ''}> Lire automatiquement les réponses en conversation</label>
         <label class="check"><input type="checkbox" id="hands" ${s.handsFree ? 'checked' : ''}> Mode mains libres : le micro se rouvre après chaque réponse</label>
+        <label class="check"><input type="checkbox" id="sfx" ${s.sfx !== false ? 'checked' : ''}> Effets sonores discrets (réponse juste, erreur, fin de série)</label>
         <div class="row"><button class="btn ghost small" id="tF">Tester une voix féminine</button><button class="btn ghost small" id="tM">Tester une voix masculine</button></div>
       </div>
       <div class="panel" id="syncPanel"><span class="eyebrow">Téléphone et synchronisation</span><h3 style="margin-bottom:14px">Même progression sur le PC et le téléphone</h3>
@@ -1288,6 +1515,7 @@
     $('#byRole').onchange = e => set('voiceByRole', e.target.checked);
     $('#rate').oninput = e => { set('ttsRate', +e.target.value); syncSpeed(); };
     $('#autoSpeak').onchange = e => set('autoSpeak', e.target.checked);
+    $('#sfx').onchange = e => { set('sfx', e.target.checked); if (e.target.checked) Sfx.play('ok'); };
     $('#hands').onchange = e => set('handsFree', e.target.checked);
     $('#tF').onclick = () => Speech.speak(V.testF, { gender: 'f' });
     $('#tM').onclick = () => Speech.speak(V.testM, { gender: 'm' });

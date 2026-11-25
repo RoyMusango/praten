@@ -608,6 +608,178 @@ tr.hl td:first-child { border-radius: 10px 0 0 10px; } tr.hl td:last-child { bor
 /* Barre de défilement discrète (ordinateur) */
 .fx { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ink) 22%, transparent) transparent; }
 
+/* =====================================================================
+   Médias interactifs : leçons animées, tuiles, paires, écoute
+   ===================================================================== */
+/* Réactions aux réponses (toutes versions : courtes et discrètes) */
+@keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+@keyframes bump { 0% { transform: none; } 40% { transform: scale(1.025); } 100% { transform: none; } }
+.fx-bad { animation: shake .42s var(--ease); }
+.fx-good { animation: bump .38s var(--ease); }
+
+/* Carte d'annonce de la leçon (fiche de grammaire) */
+.lesson-cta { display: flex; align-items: center; gap: 20px; border-radius: var(--r); padding: 22px 26px; margin-bottom: 20px; color: #fff; background: var(--hero); box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.lesson-cta h3 { color: #fff; font-size: 1.25rem; }
+.lesson-cta p { color: rgba(255, 255, 255, .85); font-size: .95rem; margin-top: 4px; }
+.lesson-cta .eyebrow { color: rgba(255, 255, 255, .85); }
+.lesson-cta > div { flex: 1; min-width: 0; }
+.play-big { width: 64px; height: 64px; border-radius: 50%; border: 0; flex: none; cursor: pointer; display: grid; place-items: center; background: #fff; color: #1b1420; box-shadow: 0 12px 26px -12px rgba(0, 0, 0, .55); transition: transform .2s var(--ease); }
+.play-big svg { width: 26px; height: 26px; fill: currentColor; margin-left: 3px; }
+@media (hover: hover) { .play-big:hover { transform: scale(1.07); } }
+.fx .play-big { animation: ring 2.4s ease-out infinite 1s; }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55), 0 12px 26px -12px rgba(0, 0, 0, .55); } 70%, 100% { box-shadow: 0 0 0 18px rgba(255, 255, 255, 0), 0 12px 26px -12px rgba(0, 0, 0, .55); } }
+
+/* Lecteur */
+.lesson { border-radius: var(--r); background: var(--card); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; outline: none; }
+.lesson-stage { position: relative; min-height: 340px; display: grid; padding: 34px 34px 26px; background:
+  radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+  radial-gradient(100% 80% at 0% 100%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 60%), var(--card); }
+.lesson-scene { display: grid; align-content: center; min-width: 0; }
+.scene { animation: fade .45s var(--ease) both; min-width: 0; }
+.fx .scene { animation: rise .55s var(--ease) both; }
+.lesson-cap { min-height: 64px; padding: 16px 30px; font-size: 1.04rem; color: var(--ink-2); background: var(--surface); line-height: 1.5; }
+.lesson-cap.in { animation: fade .5s ease both; }
+.lesson-bar { display: flex; align-items: center; gap: 8px; padding: 12px 18px; background: var(--surface); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent); }
+.lesson-bar .icon-btn { width: 44px; height: 44px; flex: none; }
+.lesson-play { width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; background: var(--accent); color: var(--btn-ink); flex: none; box-shadow: 0 8px 18px -10px var(--accent); }
+.lesson-play svg { width: 22px; height: 22px; fill: currentColor; }
+.lesson-segs { flex: 1; display: flex; gap: 5px; min-width: 0; padding: 0 8px; }
+.lesson-segs button { flex: 1; min-width: 0; height: 30px; border: 0; background: none; cursor: pointer; padding: 0; display: grid; align-items: center; }
+.lesson-segs i { display: block; height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 12%, transparent); overflow: hidden; position: relative; }
+.lesson-segs .done i { background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.lesson-segs .cur i::after { content: ''; position: absolute; inset: 0; width: 45%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.fx .lesson:not(.paused) .lesson-segs .cur i::after { animation: segrun 2.6s ease-in-out infinite alternate; }
+@keyframes segrun { from { width: 15%; } to { width: 85%; } }
+
+/* Onde : la voix native parle */
+.voice-wave { position: absolute; right: 22px; top: 18px; display: flex; gap: 3px; align-items: flex-end; height: 18px; opacity: 0; transition: opacity .3s; }
+.voice-wave.on { opacity: 1; }
+.voice-wave i { width: 3px; height: 30%; border-radius: 2px; background: var(--accent); }
+.voice-wave.on i { animation: wave .9s ease-in-out infinite; }
+.voice-wave i:nth-child(2) { animation-delay: .15s !important; } .voice-wave i:nth-child(3) { animation-delay: .3s !important; }
+.voice-wave i:nth-child(4) { animation-delay: .45s !important; } .voice-wave i:nth-child(5) { animation-delay: .6s !important; }
+@keyframes wave { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+
+/* Éléments communs des scènes */
+.scene .tl { font-size: clamp(1.2rem, 3vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em; line-height: 1.4; }
+.scene .fr { color: var(--muted); font-size: .95rem; margin-top: 3px; }
+.scene .w { display: inline-block; }
+.scene .w.hl, .tile.hl { color: var(--accent); }
+.scene .w.hl { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 8px; padding: 0 .14em; }
+.fx .scene .on .w, .fx .scene .sc-title .w { animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * 70ms); }
+.scene [data-step] { opacity: .16; transition: opacity .45s ease, transform .45s var(--ease); }
+.scene [data-step].on { opacity: 1; }
+.scene .exl { margin: 0 0 16px; }
+.scene .exl:last-child { margin-bottom: 0; }
+
+.sc-title { text-align: center; }
+.sc-title h2 { font-size: clamp(2rem, 5vw, 3rem); margin: 10px 0 8px; background: linear-gradient(100deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sc-title p { color: var(--ink-2); font-size: 1.1rem; }
+.sc-ex h3 { margin-bottom: 18px; }
+
+.sc-conj { display: flex; gap: 34px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.sc-conj .verb { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 500; letter-spacing: -0.02em; text-align: center; }
+.sc-conj .verb span { display: block; font-size: .95rem; color: var(--muted); letter-spacing: 0; }
+.scene .end { color: var(--accent); font-weight: 600; }
+.sc-conj table { font-size: 1.2rem; border-collapse: separate; border-spacing: 0 4px; }
+.sc-conj td { padding: 5px 14px; }
+.sc-conj td:first-child { color: var(--muted); text-align: right; }
+.sc-conj tr.on td:nth-child(2) { background: color-mix(in srgb, var(--gold) 14%, transparent); border-radius: 10px; }
+.sc-conj td.fr { font-size: .9rem; }
+.scene tr[data-step] { transform: translateX(-10px); }
+.scene tr[data-step].on { transform: none; }
+
+.sc-time svg { width: 100%; max-height: 170px; overflow: visible; }
+.sc-time .axis { stroke: color-mix(in srgb, var(--ink) 35%, transparent); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sc-time .now { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 3 5; }
+.sc-time text { font: 500 13px var(--font); fill: var(--muted); }
+.sc-time .nowt { fill: var(--ink); font-weight: 600; }
+.sc-time .tm { opacity: 0; transition: opacity .4s; }
+.sc-time .tm.on { opacity: 1; }
+.fx .sc-time .point.on { animation: pop .5s var(--ease) both; }
+.fx .sc-time .span.on { animation: grow-x .8s var(--ease) both; }
+.fx .sc-time .link.on path { animation: dash 1s var(--ease) both; }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes dash { from { stroke-dashoffset: 160; } }
+.tl-list { margin-top: 18px; display: grid; gap: 10px; }
+.tl-list .exl { display: flex; gap: 12px; align-items: flex-start; margin: 0; }
+.tl-list .exl > i { width: 12px; height: 12px; border-radius: 50%; flex: none; margin-top: .55em; }
+.sc-time .tl { font-size: clamp(1.1rem, 2.6vw, 1.35rem); }
+
+.sc-vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: stretch; }
+.vs-col { border-radius: 18px; padding: 20px 22px; background: color-mix(in srgb, var(--accent) 7%, var(--card)); min-width: 0; }
+.vs-col.b { background: color-mix(in srgb, var(--accent-2) 8%, var(--card)); }
+.vs-col h3 { margin-bottom: 4px; color: var(--accent); font-size: 1.4rem; }
+.vs-col.b h3 { color: var(--accent-2); }
+.vs-col .sub { color: var(--ink-2); font-size: .92rem; margin-bottom: 14px; }
+.vs-col .tl { font-size: 1.15rem; }
+.vs-mark { align-self: center; color: var(--muted); font-weight: 500; }
+
+.sc-tip { max-width: 640px; margin: 0 auto; }
+.tip-ico { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: color-mix(in srgb, var(--gold) 22%, transparent); color: color-mix(in srgb, var(--gold) 50%, var(--ink)); margin-bottom: 12px; }
+.tip-txt { font-size: 1.15rem; line-height: 1.6; margin-bottom: 18px; }
+.tip-txt b { color: var(--accent); font-weight: 600; }
+
+.sc-move { text-align: center; }
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.tile { display: inline-flex; align-items: center; min-height: 48px; padding: 0 18px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 1.25rem; font-weight: 500; transition: transform .7s var(--ease); }
+.tile.new { animation: pop .5s var(--ease) both; }
+.sc-move .fr { margin-top: 18px; }
+
+.sc-quiz { text-align: center; }
+.sc-quiz .q { font-size: clamp(1.4rem, 3.6vw, 2rem); font-weight: 500; margin: 12px 0 8px; white-space: pre-line; }
+.sc-quiz .blank { color: var(--accent); padding: 0 .15em; border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.sc-quiz .opts { margin-top: 18px; }
+.quiz-res { margin-top: 16px; min-height: 2em; }
+.sc-end { text-align: center; }
+.sc-end h2 { margin: 8px 0; }
+
+/* Tuiles à remettre dans l'ordre (exercice) */
+.build-line { min-height: 66px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-content: center; padding: 10px; border-radius: 18px; background: var(--surface); margin-bottom: 16px; }
+.build-line:empty::before { content: attr(data-empty); color: var(--muted); font-size: .95rem; }
+.build-pool { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 18px; min-height: 52px; }
+.wtile { min-height: 46px; padding: 0 16px; border: 0; border-radius: 14px; background: var(--card); color: var(--ink); box-shadow: var(--shadow); font: 500 1.08rem var(--font); cursor: pointer; transition: transform .2s var(--ease), box-shadow .2s, opacity .2s; }
+.wtile.used { opacity: .25; pointer-events: none; box-shadow: none; }
+.build-line .wtile { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+@media (hover: hover) { .wtile:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); } }
+
+/* Écoute : gros bouton haut-parleur */
+.listen-big { width: 92px; height: 92px; border-radius: 50%; border: 0; margin: 6px auto 18px; display: grid; place-items: center; cursor: pointer; color: #fff;
+  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 60%, var(--accent))); box-shadow: 0 12px 24px -12px var(--accent-2); transition: transform .2s var(--ease); }
+.listen-big svg { width: 38px; height: 38px; }
+@media (hover: hover) { .listen-big:hover { transform: scale(1.06); } }
+
+/* Jeu des paires */
+.pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 680px; margin: 0 auto; }
+.pairs .col { display: grid; gap: 10px; align-content: start; }
+.pcard { min-height: 58px; padding: 10px 16px; border: 0; border-radius: 16px; background: var(--card); color: var(--ink); box-shadow: var(--shadow); font: 500 1.02rem/1.3 var(--font); cursor: pointer; text-align: center; transition: transform .2s var(--ease), background .2s, box-shadow .2s, opacity .3s; }
+.pcard.sel { background: color-mix(in srgb, var(--accent) 14%, var(--card)); box-shadow: 0 0 0 2px var(--accent); }
+.pcard.ok { background: var(--good-bg); color: var(--good); box-shadow: none; opacity: .6; pointer-events: none; }
+.pcard.no { background: var(--bad-bg); color: var(--bad); }
+.pairs-meta { display: flex; justify-content: center; gap: 22px; color: var(--muted); font-size: .9rem; margin-bottom: 18px; }
+.pairs-meta b { color: var(--ink); }
+
+/* Étiquette « Leçon » sur les cartes de grammaire */
+.tag.lesson { background: color-mix(in srgb, var(--accent-2) 12%, transparent); color: var(--accent-2); }
+.tag.lesson.seen { background: var(--good-bg); color: var(--good); }
+
+@media (max-width: 640px) {
+  .lesson-stage { min-height: 300px; padding: 26px 18px 20px; }
+  .lesson-cap { padding: 14px 18px; font-size: .98rem; }
+  .lesson-bar { padding: 10px; gap: 4px; }
+  .lesson-segs { padding: 0 4px; gap: 3px; }
+  .sc-vs { grid-template-columns: 1fr; }
+  .sc-time text { font-size: 24px; }
+  .sc-time svg { max-height: none; }
+  .vs-mark { display: none; }
+  .sc-conj { gap: 16px; }
+  .sc-conj table { font-size: 1.05rem; }
+  .sc-conj td { padding: 4px 8px; }
+  .lesson-cta { padding: 18px; gap: 14px; }
+  .play-big { width: 54px; height: 54px; }
+  .pcard { min-height: 54px; font-size: .95rem; padding: 8px 10px; }
+}
+
 /* Animations réduites : on coupe tout */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

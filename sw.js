@@ -1,14 +1,14 @@
 // Service worker : l'app reste utilisable sans réseau (vocabulaire, verbes, grammaire, prononciation).
 // Stratégie : on sert la copie en cache tout de suite et on la met à jour en arrière-plan.
 // Le nom du cache inclut le chemin de l'app pour que les apps de langues ne se mélangent pas.
-const VERSION = 'v20261113-1140';
+const VERSION = 'v20261125-2239';
 const CACHE = 'applangues' + self.location.pathname.replace(/sw\.js$/, '') + VERSION;
 const SHELL = [
   './', './index.html', './css/style.css', './css/theme.css', './manifest.webmanifest',
   './fonts/jost-latin.woff2', './fonts/jost-latin-italic.woff2',
   './icons/favicon.svg', './icons/favicon-32.png', './icons/icon-192.png',
-  './js/lang.js', './js/conjugator.js', './js/data/vocab.js', './js/data/grammar.js', './js/data/scenarios.js', './js/data/sounds.js',
-  './js/store.js', './js/sync.js', './js/speech.js', './js/ai.js', './js/app.js',
+  './js/lang.js', './js/conjugator.js', './js/data/vocab.js', './js/data/grammar.js', './js/data/scenarios.js', './js/data/sounds.js', './js/data/lessons.js',
+  './js/store.js', './js/sync.js', './js/speech.js', './js/ai.js', './js/media.js', './js/app.js',
 ];
 const PREFIX = 'applangues' + self.location.pathname.replace(/sw\.js$/, '');
 

@@ -24,7 +24,7 @@ window.LANG = {
     session: 'Jouw sessie', priorities: 'Jouw prioriteiten', wotd: 'Woord van de dag', speakToday: 'Vandaag praten',
     stepWords: 'Woorden', stepGrammar: 'Werkwoorden & grammatica', stepSpeak: 'Spreken',
     questions: 'Vragen', speakAloud: 'Zeg het hardop', wellDone: 'Goed gedaan!',
-    review: 'Herhalen', synonyms: 'Synoniemen', themes: 'Thema’s', inLang: 'En néerlandais',
+    review: 'Herhalen', synonyms: 'Synoniemen', themes: 'Thema’s', games: 'Spelletjes', inLang: 'En néerlandais',
     conjugator: 'Vervoeging', verbsEyebrow: 'Verbes',
     verbsLead: 'Le présent d’abord (ik werk, jij werkt, wij werken), la question (werk jij ?), puis le passé composé (ik heb gewerkt). L’entraîneur insiste sur ce que tu rates.',
     soundsLead: 'Le néerlandais s’écrit presque comme il se prononce, à condition de connaître une quinzaine de sons. Écoute une voix native, répète, et le micro vérifie que tu es compris. Commence ici.',
