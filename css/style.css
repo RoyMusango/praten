@@ -784,3 +784,9 @@ tr.hl td:first-child { border-radius: 10px 0 0 10px; } tr.hl td:last-child { bor
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Questions à choix : numéro de touche affiché sur ordinateur (touches 1 à 9) */
+@media (hover: hover) and (pointer: fine) {
+  .opts { counter-reset: opt; }
+  .opts .btn::before { counter-increment: opt; content: counter(opt); display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-right: 10px; border-radius: 6px; font-size: .78rem; font-weight: 600; color: var(--ink-2); background: color-mix(in srgb, var(--ink-2) 12%, transparent); }
+}

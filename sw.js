@@ -1,10 +1,10 @@
 // Service worker : l'app reste utilisable sans réseau (vocabulaire, verbes, grammaire, prononciation).
 // Stratégie : on sert la copie en cache tout de suite et on la met à jour en arrière-plan.
 // Le nom du cache inclut le chemin de l'app pour que les apps de langues ne se mélangent pas.
-const VERSION = 'v20261125-2239';
+const VERSION = 'v20261125-securite';
 const CACHE = 'applangues' + self.location.pathname.replace(/sw\.js$/, '') + VERSION;
 const SHELL = [
-  './', './index.html', './css/style.css', './css/theme.css', './manifest.webmanifest',
+  './', './index.html', './css/style.css', './css/theme.css', './manifest.webmanifest', './js/boot.js',
   './fonts/jost-latin.woff2', './fonts/jost-latin-italic.woff2',
   './icons/favicon.svg', './icons/favicon-32.png', './icons/icon-192.png',
   './js/lang.js', './js/conjugator.js', './js/data/vocab.js', './js/data/grammar.js', './js/data/scenarios.js', './js/data/sounds.js', './js/data/lessons.js',

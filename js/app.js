@@ -163,17 +163,30 @@
       const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = ko; document.head.appendChild(el);
     });
   }
+  // Lien de configuration (QR code) : rien n'est appliqué sans ton accord explicite.
+  // Sans cette étape, n'importe quel lien piégé pouvait remplacer ta clé IA et ton jeton GitHub.
   function importSetupFromHash() {
     const m = location.hash.match(/^#setup=([\w-]+)/);
     if (!m) return;
-    try {
-      const p = JSON.parse(fromB64url(m[1]));
-      if (p.g) { Store.setSharedKey('geminiKey', p.g); S().provider = 'gemini'; }
-      if (p.t && p.r) Sync.setCfg({ token: p.t, repo: p.r });
-      Store.save();
-      setTimeout(() => toast('Appareil configuré : clé IA et synchro activées pour toutes tes apps de langues.', 5000), 300);
-    } catch (e) { }
     history.replaceState(null, '', location.pathname + '#today'); // retire les clés de l'adresse
+    let p;
+    try { p = JSON.parse(fromB64url(m[1])); } catch (e) { return; }
+    const str = v => (typeof v === 'string' && v.length < 400 ? v.trim() : '');
+    const g = str(p && p.g), t = str(p && p.t), r = str(p && p.r);
+    const repoOk = /^[\w.-]+\/[\w.-]+$/.test(r);
+    if (!g && !(t && repoOk)) return;
+    const quoi = [g && 'remplacer ta clé Gemini', t && repoOk && `synchroniser ta progression avec le dépôt GitHub <b>${esc(r)}</b>`].filter(Boolean).join(' et ');
+    const box = modal(`<span class="eyebrow">Lien de configuration</span><h2>Appliquer ces réglages ?</h2>
+      <p style="margin-top:12px">Ce lien veut ${quoi}, pour toutes tes apps de langues.</p>
+      <p class="muted small" style="margin-top:10px">Accepte seulement si tu viens de scanner ton propre QR code. Un lien envoyé par quelqu’un d’autre pourrait faire passer ta progression et tes conversations par son compte.</p>
+      <div class="row"><button class="btn" id="setupOk" type="button">Appliquer</button><button class="btn quiet" data-close type="button">Refuser</button></div>`);
+    $('#setupOk', box).onclick = () => {
+      if (g) { Store.setSharedKey('geminiKey', g); S().provider = 'gemini'; }
+      if (t && repoOk) Sync.setCfg({ token: t, repo: r });
+      Store.save(); closeModal();
+      if (Sync.enabled()) Sync.syncNow();
+      toast('Appareil configuré : clé IA et synchro activées pour toutes tes apps de langues.', 5000);
+    };
   }
 
   // ---------- Toast ----------
@@ -242,6 +255,17 @@
     return $('#modalBox');
   }
   function closeModal() { $('#modal').classList.add('hidden'); }
+
+  // Questions à choix : touches 1 à 9 pour répondre (la touche Entrée valide déjà « Suivant »)
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey || (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]'))) return;
+    const n = '123456789'.indexOf(e.key);
+    if (n < 0) return;
+    const zone = $('#modal').classList.contains('hidden') ? '#view' : '#modalBox';
+    const blocs = $$(zone + ' .opts').filter(o => o.offsetParent);
+    const b = blocs.length && $$('button', blocs[blocs.length - 1])[n];
+    if (b && !b.disabled) { e.preventDefault(); b.click(); }
+  });
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.closest('[data-close]')) closeModal(); });
 
   const head = (eyebrow, title, lead = '') => `<div class="page-head"><span class="eyebrow">${eyebrow}</span><h1>${title}</h1>${lead ? `<p class="lead">${lead}</p>` : ''}</div>`;
@@ -1230,6 +1254,8 @@
       Store.recordTopic(id, ok);
       if (it.verb) Store.recordConj(it.tense, it.verb, ok);
       if (btn) btn.classList.add(ok ? 'good' : 'bad');
+      // Mauvaise réponse à un choix multiple : la bonne option passe en vert
+      if (!ok && it.opts) $$('[data-opt]', box).forEach(x => { if (compare(x.dataset.opt, it.a, { pronoun: !!it.verb }) !== 'wrong') x.classList.add('good'); });
       const shown = ok && res === 'ok' ? norm(val) === norm(it.a[0]) ? it.a[0] : val.trim() : it.a[0];
       // Phrase complète : la question remplie, ou la réponse seule pour une question à choix sans trou
       const full = it.kind === 'order' ? (ok && it.a.find(x => compare(val, [x], { pronoun: !!it.verb }) !== 'wrong')) || it.a[0] : !it.q.includes('___') ? shown : it.q.includes('\n') ? it.q.split('\n').pop().replace('___', shown) : it.q.replace('___', shown);
@@ -1562,8 +1588,9 @@
           <li>Tu recevras un rappel toutes les 2 h entre 8 h et 20 h, tant qu’une séance du jour n’est pas faite.</li></ol></div>` : ''}`;
       try {
         await loadScript('js/vendor/qrcode.min.js');
+        if (!$('#qr')) return; // page quittée pendant le chargement
         new QRCode($('#qr'), { text: link, width: 208, height: 208, correctLevel: QRCode.CorrectLevel.M });
-      } catch (e) { $('#qr').textContent = 'QR code indisponible'; }
+      } catch (e) { if ($('#qr')) $('#qr').textContent = 'QR code indisponible'; }
       $('#copyLink').onclick = async () => { try { await navigator.clipboard.writeText(link); $('#copyLink').textContent = 'Lien copié'; } catch (e) { prompt('Copie ce lien :', link); } };
     }
     renderPhone();
